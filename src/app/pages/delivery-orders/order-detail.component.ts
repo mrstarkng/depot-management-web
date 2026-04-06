@@ -25,8 +25,8 @@ export class OrderDetailComponent implements OnInit {
   order?: DeliveryOrder;
 
   constructor(
-    private route: ActivatedRoute,
-    private depotService: DepotService,
+    private readonly route: ActivatedRoute,
+    private readonly depotService: DepotService,
   ) {}
 
   ngOnInit(): void {

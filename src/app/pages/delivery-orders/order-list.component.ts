@@ -23,7 +23,7 @@ import { DeliveryOrder } from '../../core/models/depot.models';
 export class OrderListComponent implements OnInit {
   orders: DeliveryOrder[] = [];
 
-  constructor(private depotService: DepotService) {}
+  constructor(private readonly depotService: DepotService) {}
 
   ngOnInit(): void {
     this.depotService.getDeliveryOrders().subscribe({

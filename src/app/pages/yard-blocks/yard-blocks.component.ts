@@ -22,7 +22,7 @@ import { YardBlock } from '../../core/models/depot.models';
 export class YardBlocksComponent implements OnInit {
   blocks: YardBlock[] = [];
 
-  constructor(private depotService: DepotService) {}
+  constructor(private readonly depotService: DepotService) {}
 
   ngOnInit(): void {
     this.depotService.getYardBlocks().subscribe({

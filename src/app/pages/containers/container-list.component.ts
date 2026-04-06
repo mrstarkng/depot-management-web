@@ -23,7 +23,7 @@ import { DepotContainer } from '../../core/models/depot.models';
 export class ContainerListComponent implements OnInit {
   containers: DepotContainer[] = [];
 
-  constructor(private depotService: DepotService) {}
+  constructor(private readonly depotService: DepotService) {}
 
   ngOnInit(): void {
     this.depotService.getContainers().subscribe({

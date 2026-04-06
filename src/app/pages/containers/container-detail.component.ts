@@ -25,8 +25,8 @@ export class ContainerDetailComponent implements OnInit {
   container?: DepotContainer;
 
   constructor(
-    private route: ActivatedRoute,
-    private depotService: DepotService,
+    private readonly route: ActivatedRoute,
+    private readonly depotService: DepotService,
   ) {}
 
   ngOnInit(): void {

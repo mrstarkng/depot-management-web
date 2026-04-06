@@ -15,7 +15,7 @@ import {
 export class DepotService {
   private readonly baseUrl = '/api';
 
-  constructor(private http: HttpClient) {}
+  constructor(private readonly http: HttpClient) {}
 
   // Yard Blocks
   getYardBlocks(): Observable<YardBlock[]> {
