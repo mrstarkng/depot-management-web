@@ -1,0 +1,68 @@
+@import "tailwindcss";
+@source "./app";
+@import 'primeicons/primeicons.css';
+
+/* ─── Design Tokens ─── */
+:root {
+  --sidebar-bg: #1E2535;
+  --sidebar-text: #B0BAC9;
+  --sidebar-active: #0275D8;
+  --primary: #0275D8;
+  --primary-hover: #025AA5;
+  --danger: #D9534F;
+  --success: #3C763D;
+  --warning: #8A6D3B;
+  --text-dark: #333333;
+  --text-secondary: #888888;
+  --text-label: #555555;
+  --border: #E0E0E0;
+  --bg-page: #F5F5F5;
+  --bg-card: #FFFFFF;
+  --badge-green-bg: #DFF0D8;
+  --badge-green-text: #3C763D;
+  --badge-blue-bg: #D9EDF7;
+  --badge-blue-text: #0275D8;
+  --badge-yellow-bg: #FCF8E3;
+  --badge-yellow-text: #8A6D3B;
+  --badge-red-bg: #F2DEDE;
+  --badge-red-text: #A94442;
+  --badge-gray-bg: #F5F5F5;
+  --badge-gray-text: #777777;
+}
+
+/* ─── Base ─── */
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-dark);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CCC;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #AAA;
+}
+
+/* ─── PrimeNG Toast Override ─── */
+.p-toast {
+  z-index: 10000 !important;
+}

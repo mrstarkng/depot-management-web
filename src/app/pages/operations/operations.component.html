@@ -1,0 +1,659 @@
+<!-- Page Header -->
+<div class="mb-4">
+  <div class="text-[11px] text-[#888] mb-1">Home › Operations</div>
+  <h1 class="text-[20px] font-semibold text-[#333]">Container Operations</h1>
+</div>
+
+<!-- Tab Bar -->
+<div class="flex gap-1 mb-4 border-b border-[#E0E0E0]">
+  @if (authService.canGateInOut()) {
+    <button (click)="setActiveTab('inbound')"
+            class="px-4 py-2 text-[13px] font-medium border-b-2 transition-colors"
+            [class.border-[#0275D8]]="activeTab === 'inbound'"
+            [class.text-[#0275D8]]="activeTab === 'inbound'"
+            [class.border-transparent]="activeTab !== 'inbound'"
+            [class.text-[#666]]="activeTab !== 'inbound'">
+      <i class="pi pi-sign-in mr-1.5"></i>Inbound
+    </button>
+    <button (click)="setActiveTab('outbound')"
+            class="px-4 py-2 text-[13px] font-medium border-b-2 transition-colors"
+            [class.border-[#0275D8]]="activeTab === 'outbound'"
+            [class.text-[#0275D8]]="activeTab === 'outbound'"
+            [class.border-transparent]="activeTab !== 'outbound'"
+            [class.text-[#666]]="activeTab !== 'outbound'">
+      <i class="pi pi-sign-out mr-1.5"></i>Outbound
+    </button>
+  }
+  <button (click)="setActiveTab('indepot')"
+          class="px-4 py-2 text-[13px] font-medium border-b-2 transition-colors"
+          [class.border-[#0275D8]]="activeTab === 'indepot'"
+          [class.text-[#0275D8]]="activeTab === 'indepot'"
+          [class.border-transparent]="activeTab !== 'indepot'"
+          [class.text-[#666]]="activeTab !== 'indepot'">
+    <i class="pi pi-database mr-1.5"></i>In Depot
+  </button>
+  @if (authService.canManageYard()) {
+    <button (click)="setActiveTab('relocate')"
+            class="px-4 py-2 text-[13px] font-medium border-b-2 transition-colors"
+            [class.border-[#0275D8]]="activeTab === 'relocate'"
+            [class.text-[#0275D8]]="activeTab === 'relocate'"
+            [class.border-transparent]="activeTab !== 'relocate'"
+            [class.text-[#666]]="activeTab !== 'relocate'">
+      <i class="pi pi-replay mr-1.5"></i>Relocate
+    </button>
+  }
+</div>
+
+<!-- ═══ INBOUND TAB ═══ -->
+@if (activeTab === 'inbound') {
+  <div class="flex flex-col lg:flex-row gap-4">
+    <!-- Form -->
+    <div class="flex-1 bg-white border border-[#E0E0E0] rounded p-4">
+      <h3 class="text-[14px] font-semibold text-[#333] mb-3">Record Gate-In</h3>
+
+      <!-- Container search -->
+      <div class="mb-3">
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Container <span class="text-[#D9534F]">*</span></label>
+        <div class="relative">
+          <input [(ngModel)]="inForm.containerSearch" placeholder="Search container number..."
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] focus:border-[#0275D8] focus:outline-none">
+          @if (inForm.containerSearch && !inForm.selectedContainerNumber) {
+            <div class="absolute z-10 w-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg max-h-[200px] overflow-y-auto">
+              @for (c of filteredContainersForInbound; track c.containerId) {
+                <button (click)="selectInboundContainer(c)" class="w-full text-left px-3 py-2 text-[13px] hover:bg-[#F5F5F5] border-b border-[#F0F0F0]">
+                  <span class="font-medium">{{ c.containerNumber }}</span>
+                  <span class="text-[#888] ml-2">{{ c.containerType }} {{ c.containerSize }}</span>
+                </button>
+              } @empty {
+                <div class="px-3 py-2 text-[12px] text-[#888]">No available containers found</div>
+              }
+            </div>
+          }
+          @if (inForm.selectedContainerNumber) {
+            <button (click)="inForm.selectedContainerNumber = ''; inForm.containerSearch = ''"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#333]">
+              <i class="pi pi-times text-[12px]"></i>
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Line Operator <span class="text-[#D9534F]">*</span></label>
+          <select [(ngModel)]="inForm.lineOperatorId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+            <option [value]="0" disabled>Select...</option>
+            @for (op of lineOperators; track op.id) {
+              <option [value]="op.id">{{ op.code }} — {{ op.name }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Yard Block <span class="text-[#D9534F]">*</span></label>
+          <select [(ngModel)]="inForm.yardBlockId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+            <option [value]="0" disabled>Select...</option>
+            @for (b of yardBlocks; track b.id) {
+              <option [value]="b.id">{{ b.code }} ({{ b.blockType }})</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      @if (selectedInboundBlock && selectedInboundBlock.blockType === 'Physical') {
+        <div class="grid grid-cols-3 gap-3 mb-1">
+          <div>
+            <label class="block text-[12px] font-medium text-[#555] mb-1">Bay</label>
+            <input type="number" [(ngModel)]="inForm.bay" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1"
+                   [class.border-[#F0AD4E]]="inboundBayHint">
+          </div>
+          <div>
+            <label class="block text-[12px] font-medium text-[#555] mb-1">Row</label>
+            <input type="number" [(ngModel)]="inForm.row" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+          </div>
+          <div>
+            <label class="block text-[12px] font-medium text-[#555] mb-1">Tier</label>
+            <input type="number" [(ngModel)]="inForm.tier" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+          </div>
+        </div>
+        @if (inboundBayHint) {
+          <div class="text-[11px] text-[#8A6D3B] mb-3">
+            <i class="pi pi-exclamation-triangle text-[10px] mr-1"></i>{{ inboundBayHint }}
+          </div>
+        } @else {
+          <div class="mb-3"></div>
+        }
+      }
+
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Classification <span class="text-[#D9534F]">*</span></label>
+          <select [(ngModel)]="inForm.classification" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+            <option value="A">Grade A</option>
+            <option value="B">Grade B</option>
+            <option value="C">Grade C</option>
+            <option value="D">Grade D</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Condition</label>
+          <select [(ngModel)]="inForm.condition" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+            <option value="Normal">Normal</option>
+            <option value="Damaged">Damaged</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Inbound Vehicle <span class="text-[#D9534F]">*</span></label>
+        <input [(ngModel)]="inForm.inboundVehicle" placeholder="Vehicle number or plate..."
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Remarks</label>
+        <textarea [(ngModel)]="inForm.remarks" rows="2" placeholder="Optional remarks..."
+                  class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]"></textarea>
+      </div>
+
+      @if (inboundError) {
+        <div class="mb-3 p-2.5 bg-[#FDF2F2] border border-[#F5C6CB] rounded text-[12px] text-[#D9534F]">
+          <i class="pi pi-exclamation-triangle mr-1.5"></i>{{ inboundError }}
+        </div>
+      }
+      <button (click)="submitInbound()"
+              [disabled]="inboundSaving || !inForm.selectedContainerNumber || !inForm.lineOperatorId || !inForm.yardBlockId || !inForm.inboundVehicle"
+              class="w-full bg-[#0275D8] text-white py-2 rounded text-[13px] font-medium hover:bg-[#025AA5] disabled:opacity-50 disabled:cursor-not-allowed">
+        {{ inboundSaving ? 'Recording...' : 'Record Inbound' }}
+      </button>
+    </div>
+
+    <!-- Recent Inbound -->
+    <div class="w-full lg:w-[360px] bg-white border border-[#E0E0E0] rounded">
+      <div class="px-4 py-3 border-b border-[#E0E0E0]">
+        <h3 class="text-[13px] font-semibold text-[#333]">Recent Inbound ({{ recentInbound.length }})</h3>
+      </div>
+      <div class="max-h-[400px] overflow-y-auto">
+        @for (v of recentInbound; track v.id) {
+          <div class="px-4 py-2 border-b border-[#F0F0F0] text-[12px]">
+            <span class="font-medium text-[#0275D8]">{{ v.containerNumber }}</span>
+            <span class="text-[#888] ml-2">{{ v.yardBlockCode }}</span>
+            <span class="text-[#AAA] ml-2">{{ v.inboundAt | date:'HH:mm' }}</span>
+          </div>
+        } @empty {
+          <div class="px-4 py-6 text-center text-[12px] text-[#888]">No recent inbound records</div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══ OUTBOUND TAB ═══ -->
+@if (activeTab === 'outbound') {
+  <div class="flex flex-col lg:flex-row gap-4">
+    <!-- Form -->
+    <div class="flex-1 bg-white border border-[#E0E0E0] rounded p-4">
+      <h3 class="text-[14px] font-semibold text-[#333] mb-3">Record Gate-Out</h3>
+
+      <!-- Container search -->
+      <div class="mb-3">
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Container <span class="text-[#D9534F]">*</span></label>
+        <div class="relative">
+          <input [(ngModel)]="outForm.containerSearch" placeholder="Search in-depot container..."
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] focus:border-[#0275D8] focus:outline-none">
+          @if (outForm.containerSearch && !outForm.selectedContainerNumber) {
+            <div class="absolute z-10 w-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg max-h-[200px] overflow-y-auto">
+              @for (c of filteredContainersForOutbound; track c.containerId) {
+                <button (click)="selectOutboundContainer(c)" class="w-full text-left px-3 py-2 text-[13px] hover:bg-[#F5F5F5] border-b border-[#F0F0F0]">
+                  <span class="font-medium">{{ c.containerNumber }}</span>
+                  <span class="text-[#888] ml-2">{{ c.currentBlockCode }}</span>
+                </button>
+              } @empty {
+                <div class="px-3 py-2 text-[12px] text-[#888]">No in-depot containers found</div>
+              }
+            </div>
+          }
+          @if (outForm.selectedContainerNumber) {
+            <button (click)="outForm.selectedContainerNumber = ''; outForm.containerSearch = ''; selectedOutboundVisit = null"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#333]">
+              <i class="pi pi-times text-[12px]"></i>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Selected container info -->
+      @if (selectedOutboundVisit) {
+        <div class="bg-[#EFF8FF] border border-[#0275D8]/20 rounded p-3 mb-3 text-[12px]">
+          <div class="grid grid-cols-2 gap-2">
+            <div><span class="text-[#888]">Block:</span> <span class="font-medium">{{ selectedOutboundVisit.yardBlockCode }}</span></div>
+            <div><span class="text-[#888]">Position:</span> <span class="font-medium">{{ selectedOutboundVisit.bay }}-{{ selectedOutboundVisit.row }}-{{ selectedOutboundVisit.tier }}</span></div>
+            <div><span class="text-[#888]">Grade:</span> <span class="font-medium">{{ selectedOutboundVisit.classification }}</span></div>
+            <div><span class="text-[#888]">Condition:</span> <span class="font-medium">{{ selectedOutboundVisit.condition }}</span></div>
+          </div>
+        </div>
+      }
+
+      <!-- Delivery Order (optional) -->
+      <div class="mb-3">
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Delivery Order <span class="text-[11px] text-[#888]">(optional)</span></label>
+        <div class="relative">
+          <input [(ngModel)]="outForm.orderSearch" placeholder="Search order number..."
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] focus:border-[#0275D8] focus:outline-none">
+          @if (outForm.orderSearch && !outForm.selectedOrderNumber) {
+            <div class="absolute z-10 w-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg max-h-[200px] overflow-y-auto">
+              @for (o of filteredOrders; track o.id) {
+                <button (click)="selectOrder(o)" class="w-full text-left px-3 py-2 text-[13px] hover:bg-[#F5F5F5] border-b border-[#F0F0F0]">
+                  <span class="font-medium">{{ o.orderNumber }}</span>
+                  <span class="text-[#888] ml-2">{{ o.lineOperatorCode }} → {{ o.customerName }}</span>
+                </button>
+              } @empty {
+                <div class="px-3 py-2 text-[12px] text-[#888]">No matching orders found</div>
+              }
+            </div>
+          }
+          @if (outForm.selectedOrderNumber) {
+            <button (click)="outForm.selectedOrderNumber = ''; outForm.orderSearch = ''"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#333]">
+              <i class="pi pi-times text-[12px]"></i>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Selected order info -->
+      @if (outForm.selectedOrderNumber) {
+        @for (o of deliveryOrders; track o.id) {
+          @if (o.orderNumber === outForm.selectedOrderNumber) {
+            <div class="bg-[#FFFBEB] border border-[#8A6D3B]/20 rounded p-3 mb-3 text-[12px]">
+              <div class="font-medium text-[#333] mb-1">{{ o.lineOperatorCode }} → {{ o.customerName }}</div>
+              <div class="text-[#888]">Expires: {{ o.orderExpiryDate }} | Remaining: {{ o.totalRemainingQuantity }} containers</div>
+              @for (line of o.lines; track line.id) {
+                @if (line.remainingQuantity > 0) {
+                  <div class="text-[#666] mt-0.5">{{ line.containerType }}: {{ line.remainingQuantity }} remaining</div>
+                }
+              }
+            </div>
+          }
+        }
+      }
+
+      <div class="mb-3">
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Outbound Vehicle</label>
+        <input [(ngModel)]="outForm.outboundVehicle" placeholder="Vehicle number or plate..."
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Remarks</label>
+        <textarea [(ngModel)]="outForm.remarks" rows="2" placeholder="Optional remarks..."
+                  class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]"></textarea>
+      </div>
+
+      @if (outboundError) {
+        <div class="mb-3 p-2.5 bg-[#FDF2F2] border border-[#F5C6CB] rounded text-[12px] text-[#D9534F]">
+          <i class="pi pi-exclamation-triangle mr-1.5"></i>{{ outboundError }}
+        </div>
+      }
+      <button (click)="submitOutbound()"
+              [disabled]="outboundSaving || !outForm.selectedContainerNumber"
+              class="w-full bg-[#0275D8] text-white py-2 rounded text-[13px] font-medium hover:bg-[#025AA5] disabled:opacity-50 disabled:cursor-not-allowed">
+        {{ outboundSaving ? 'Recording...' : 'Record Outbound' }}
+      </button>
+    </div>
+
+    <!-- Recent Outbound -->
+    <div class="w-full lg:w-[360px] bg-white border border-[#E0E0E0] rounded">
+      <div class="px-4 py-3 border-b border-[#E0E0E0]">
+        <h3 class="text-[13px] font-semibold text-[#333]">Recent Outbound ({{ recentOutbound.length }})</h3>
+      </div>
+      <div class="max-h-[400px] overflow-y-auto">
+        @for (v of recentOutbound; track v.id) {
+          <div class="px-4 py-2 border-b border-[#F0F0F0] text-[12px]">
+            <span class="font-medium text-[#0275D8]">{{ v.containerNumber }}</span>
+            <span class="text-[#888] ml-2">{{ v.deliveryOrderNumber || '—' }}</span>
+            <span class="text-[#AAA] ml-2">{{ v.outboundAt | date:'HH:mm' }}</span>
+          </div>
+        } @empty {
+          <div class="px-4 py-6 text-center text-[12px] text-[#888]">No recent outbound records</div>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ═══ IN DEPOT TAB ═══ -->
+@if (activeTab === 'indepot') {
+  <!-- Summary -->
+  <div class="grid grid-cols-3 gap-3 mb-4">
+    <div class="bg-white border border-[#E0E0E0] rounded p-3 text-center">
+      <div class="text-[20px] font-bold text-[#0275D8]">{{ inDepotVisits.length }}</div>
+      <div class="text-[11px] text-[#888]">Total InDepot</div>
+    </div>
+    <div class="bg-white border border-[#E0E0E0] rounded p-3 text-center">
+      <div class="text-[20px] font-bold text-[#333]">{{ physicalCount }}</div>
+      <div class="text-[11px] text-[#888]">Physical</div>
+    </div>
+    <div class="bg-white border border-[#E0E0E0] rounded p-3 text-center">
+      <div class="text-[20px] font-bold text-[#8A6D3B]">{{ virtualCount }}</div>
+      <div class="text-[11px] text-[#888]">Virtual</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white border border-[#E0E0E0] rounded p-3 mb-4 flex flex-wrap items-center gap-3">
+    <input [(ngModel)]="depotSearch" placeholder="Search container#..." (ngModelChange)="depotPage = 1"
+           class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] w-[200px]">
+    <select [(ngModel)]="depotBlock" (ngModelChange)="depotPage = 1"
+            class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+      <option value="All">All Blocks</option>
+      @for (b of uniqueBlockCodes; track b) {
+        <option [value]="b">{{ b }}</option>
+      }
+    </select>
+    <select [(ngModel)]="depotClass" (ngModelChange)="depotPage = 1"
+            class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+      <option value="All">All Grades</option>
+      <option value="A">Grade A</option>
+      <option value="B">Grade B</option>
+      <option value="C">Grade C</option>
+      <option value="D">Grade D</option>
+    </select>
+    <select [(ngModel)]="depotType" (ngModelChange)="depotPage = 1"
+            class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+      <option value="All">All Types</option>
+      <option value="Dry">Dry</option>
+      <option value="Reefer">Reefer</option>
+      <option value="OpenTop">Open Top</option>
+      <option value="FlatRack">Flat Rack</option>
+    </select>
+    <button (click)="depotSearch = ''; depotBlock = 'All'; depotClass = 'All'; depotType = 'All'; depotPage = 1"
+            class="text-[12px] text-[#0275D8] hover:underline">Reset</button>
+  </div>
+
+  <!-- Table -->
+  <div class="bg-white border border-[#E0E0E0] rounded overflow-hidden">
+    <table class="w-full text-[13px]">
+      <thead>
+        <tr class="bg-[#F5F5F5] border-b border-[#E0E0E0]">
+          <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Container #</th>
+          <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Block</th>
+          <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Bay</th>
+          <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Row</th>
+          <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Tier</th>
+          <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Grade</th>
+          <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Condition</th>
+          <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Operator</th>
+          <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (v of paginatedDepotVisits; track v.id) {
+          <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9] cursor-pointer"
+              [class.bg-[#EFF8FF]]="selectedVisit?.id === v.id"
+              (click)="selectDepotVisit(v)">
+            <td class="px-3 py-2.5 font-medium text-[#0275D8]">{{ v.containerNumber }}</td>
+            <td class="px-3 py-2.5">{{ v.yardBlockCode }}</td>
+            <td class="px-3 py-2.5">{{ v.bay ?? '—' }}</td>
+            <td class="px-3 py-2.5">{{ v.row ?? '—' }}</td>
+            <td class="px-3 py-2.5">{{ v.tier ?? '—' }}</td>
+            <td class="px-3 py-2.5">{{ v.classification }}</td>
+            <td class="px-3 py-2.5"><app-status-badge [status]="v.condition" /></td>
+            <td class="px-3 py-2.5">{{ v.lineOperatorCode }}</td>
+            <td class="px-3 py-2.5">
+              @if (authService.canManageYard()) {
+                <button (click)="openRelocate(v); $event.stopPropagation()"
+                        class="text-[12px] text-[#0275D8] hover:underline">Relocate</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="9" class="text-center py-8 text-[#888] text-[13px]">No containers in depot</td></tr>
+        }
+      </tbody>
+    </table>
+    <app-pagination [currentPage]="depotPage" [totalItems]="filteredDepotVisits.length" [itemsPerPage]="depotPerPage"
+                    (pageChange)="depotPage = $event" (itemsPerPageChange)="depotPerPage = $event; depotPage = 1" />
+  </div>
+
+  <!-- Selected visit detail -->
+  @if (selectedVisit) {
+    <div class="mt-4 bg-white border border-[#E0E0E0] rounded p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-[14px] font-semibold text-[#333]">
+          {{ selectedVisit.containerNumber }} — Movement History
+        </h3>
+        <button (click)="selectedVisit = null" class="text-[#888] hover:text-[#333]">
+          <i class="pi pi-times text-[14px]"></i>
+        </button>
+      </div>
+      <div class="space-y-2">
+        @for (m of selectedMovements; track m.id) {
+          <div class="flex items-start gap-3 pl-2 border-l-2"
+               [class.border-[#3C763D]]="m.movementType === 'Inbound'"
+               [class.border-[#0275D8]]="m.movementType === 'Relocated'"
+               [class.border-[#D9534F]]="m.movementType === 'Outbound'">
+            <div class="text-[12px]">
+              <span class="font-medium">{{ m.movementType }}</span>
+              <span class="text-[#888] ml-2">{{ m.yardBlockCode }} {{ m.bay ? 'Bay ' + m.bay : '' }}</span>
+              <span class="text-[#AAA] ml-2">{{ m.movementAt | date:'MMM d, HH:mm' }}</span>
+              @if (m.note) {
+                <span class="text-[#888] ml-2">— {{ m.note }}</span>
+              }
+            </div>
+          </div>
+        } @empty {
+          <div class="text-[12px] text-[#888]">Loading movements...</div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Action buttons in detail panel -->
+  @if (selectedVisit && authService.canManageYard()) {
+    <div class="mt-2 flex gap-2">
+      <button (click)="openRelocate(selectedVisit)"
+              class="text-[12px] px-3 py-1.5 bg-[#0275D8] text-white rounded hover:bg-[#025AA5]">
+        <i class="pi pi-replay mr-1"></i>Relocate
+      </button>
+    </div>
+  }
+
+  <!-- Relocate Slide-Over -->
+  @if (showRelocate && selectedVisit) {
+    <div class="fixed inset-0 z-50 flex justify-end">
+      <div class="absolute inset-0 bg-black/30" (click)="showRelocate = false"></div>
+      <div class="relative bg-white shadow-xl flex flex-col h-full w-[400px] max-w-full">
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-[#E0E0E0] bg-[#F5F5F5]">
+          <h2 class="text-[16px] font-semibold text-[#333]">Relocate {{ selectedVisit.containerNumber }}</h2>
+          <button (click)="showRelocate = false" class="p-1 rounded hover:bg-[#E0E0E0] text-[#666]">
+            <i class="pi pi-times text-[14px]"></i>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto px-5 py-4">
+          <div class="mb-3">
+            <label class="block text-[12px] font-medium text-[#555] mb-1">Target Block <span class="text-[#D9534F]">*</span></label>
+            <select [(ngModel)]="relocateForm.yardBlockId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+              @for (b of yardBlocks; track b.id) {
+                <option [value]="b.id">{{ b.code }} ({{ b.blockType }})</option>
+              }
+            </select>
+          </div>
+          @if (selectedRelocateBlock && selectedRelocateBlock.blockType === 'Physical') {
+            <div class="grid grid-cols-3 gap-3 mb-1">
+              <div>
+                <label class="block text-[12px] font-medium text-[#555] mb-1">Bay</label>
+                <input type="number" [(ngModel)]="relocateForm.bay" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1"
+                       [class.border-[#F0AD4E]]="relocateBayHint">
+              </div>
+              <div>
+                <label class="block text-[12px] font-medium text-[#555] mb-1">Row</label>
+                <input type="number" [(ngModel)]="relocateForm.row" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+              </div>
+              <div>
+                <label class="block text-[12px] font-medium text-[#555] mb-1">Tier</label>
+                <input type="number" [(ngModel)]="relocateForm.tier" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+              </div>
+            </div>
+            @if (relocateBayHint) {
+              <div class="text-[11px] text-[#8A6D3B] mb-3">
+                <i class="pi pi-exclamation-triangle text-[10px] mr-1"></i>{{ relocateBayHint }}
+              </div>
+            } @else {
+              <div class="mb-3"></div>
+            }
+          }
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-[12px] font-medium text-[#555] mb-1">Classification</label>
+              <select [(ngModel)]="relocateForm.classification" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+                <option value="A">Grade A</option>
+                <option value="B">Grade B</option>
+                <option value="C">Grade C</option>
+                <option value="D">Grade D</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[12px] font-medium text-[#555] mb-1">Condition</label>
+              <select [(ngModel)]="relocateForm.condition" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+                <option value="Normal">Normal</option>
+                <option value="Damaged">Damaged</option>
+              </select>
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-[12px] font-medium text-[#555] mb-1">Reason</label>
+            <textarea [(ngModel)]="relocateForm.reason" rows="2"
+                      class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" placeholder="Reason for relocation..."></textarea>
+          </div>
+          <button (click)="submitRelocate()"
+                  [disabled]="relocateSaving || !relocateForm.yardBlockId"
+                  class="w-full bg-[#0275D8] text-white py-2 rounded text-[13px] font-medium hover:bg-[#025AA5] disabled:opacity-50">
+            {{ relocateSaving ? 'Relocating...' : 'Relocate Container' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+}
+
+<!-- ═══ RELOCATE TAB ═══ -->
+@if (activeTab === 'relocate') {
+  <div class="flex flex-col lg:flex-row gap-4">
+    <!-- Form -->
+    <div class="flex-1 bg-white border border-[#E0E0E0] rounded p-4">
+      <h3 class="text-[14px] font-semibold text-[#333] mb-3">Relocate Container</h3>
+
+      <!-- Container search -->
+      <div class="mb-3">
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Container <span class="text-[#D9534F]">*</span></label>
+        <div class="relative">
+          <input [(ngModel)]="relTabForm.containerSearch" placeholder="Search in-depot container..."
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] focus:border-[#0275D8] focus:outline-none">
+          @if (relTabForm.containerSearch && !relTabForm.selectedContainerNumber) {
+            <div class="absolute z-10 w-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg max-h-[200px] overflow-y-auto">
+              @for (c of filteredContainersForRelocate; track c.containerId) {
+                <button (click)="selectRelocateTabContainer(c)" class="w-full text-left px-3 py-2 text-[13px] hover:bg-[#F5F5F5] border-b border-[#F0F0F0]">
+                  <span class="font-medium">{{ c.containerNumber }}</span>
+                  <span class="text-[#888] ml-2">{{ c.containerType }} {{ c.containerSize }}</span>
+                  <span class="text-[#AAA] ml-1">— {{ c.currentBlockCode }}</span>
+                </button>
+              } @empty {
+                <div class="px-3 py-2 text-[12px] text-[#888]">No in-depot containers found</div>
+              }
+            </div>
+          }
+          @if (relTabForm.selectedContainerNumber) {
+            <button (click)="resetRelocateTabForm()"
+                    class="absolute right-2 top-1/2 -translate-y-1/2 text-[#888] hover:text-[#333]">
+              <i class="pi pi-times text-[12px]"></i>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Current location (read-only) -->
+      @if (selectedRelTabContainer) {
+        <div class="bg-[#F5F5F5] border border-[#E0E0E0] rounded p-3 mb-3 text-[12px]">
+          <div class="text-[11px] font-semibold text-[#888] mb-1 uppercase">Current Location</div>
+          <div class="grid grid-cols-2 gap-2">
+            <div><span class="text-[#888]">Block:</span> <span class="font-medium">{{ selectedRelTabContainer.currentBlockCode }}</span></div>
+            <div><span class="text-[#888]">Bay:</span> <span class="font-medium">{{ selectedRelTabContainer.bay ?? '—' }}</span></div>
+            <div><span class="text-[#888]">Row:</span> <span class="font-medium">{{ selectedRelTabContainer.row ?? '—' }}</span></div>
+            <div><span class="text-[#888]">Tier:</span> <span class="font-medium">{{ selectedRelTabContainer.tier ?? '—' }}</span></div>
+          </div>
+        </div>
+      }
+
+      <!-- New Location -->
+      <div class="mb-3">
+        <label class="block text-[12px] font-medium text-[#555] mb-1">New Block <span class="text-[#D9534F]">*</span></label>
+        <select [(ngModel)]="relTabForm.yardBlockId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+          <option [value]="0" disabled>Select block...</option>
+          @for (b of yardBlocks; track b.id) {
+            <option [value]="b.id">{{ b.code }} ({{ b.blockType }})</option>
+          }
+        </select>
+      </div>
+
+      @if (selectedRelTabBlock && selectedRelTabBlock.blockType === 'Physical') {
+        <div class="grid grid-cols-3 gap-3 mb-1">
+          <div>
+            <label class="block text-[12px] font-medium text-[#555] mb-1">New Bay <span class="text-[#D9534F]">*</span></label>
+            <input type="number" [(ngModel)]="relTabForm.bay" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1"
+                   [class.border-[#F0AD4E]]="relTabBayHint">
+          </div>
+          <div>
+            <label class="block text-[12px] font-medium text-[#555] mb-1">New Row <span class="text-[#D9534F]">*</span></label>
+            <input type="number" [(ngModel)]="relTabForm.row" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+          </div>
+          <div>
+            <label class="block text-[12px] font-medium text-[#555] mb-1">New Tier <span class="text-[#D9534F]">*</span></label>
+            <input type="number" [(ngModel)]="relTabForm.tier" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+          </div>
+        </div>
+        @if (relTabBayHint) {
+          <div class="text-[11px] text-[#8A6D3B] mb-3">
+            <i class="pi pi-exclamation-triangle text-[10px] mr-1"></i>{{ relTabBayHint }}
+          </div>
+        } @else {
+          <div class="mb-3"></div>
+        }
+      }
+
+      <div class="mb-4">
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Remarks</label>
+        <textarea [(ngModel)]="relTabForm.remarks" rows="2"
+                  class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" placeholder="Reason for relocation..."></textarea>
+      </div>
+
+      @if (relTabError) {
+        <div class="mb-3 p-2.5 bg-[#FDF2F2] border border-[#F5C6CB] rounded text-[12px] text-[#D9534F]">
+          <i class="pi pi-exclamation-triangle mr-1.5"></i>{{ relTabError }}
+        </div>
+      }
+      <button (click)="submitRelocateTab()"
+              [disabled]="relTabSaving || !relTabForm.selectedContainerNumber || !relTabForm.yardBlockId"
+              class="w-full bg-[#0275D8] text-white py-2 rounded text-[13px] font-medium hover:bg-[#025AA5] disabled:opacity-50 disabled:cursor-not-allowed">
+        {{ relTabSaving ? 'Relocating...' : 'Relocate Container' }}
+      </button>
+    </div>
+
+    <!-- Recent Relocations -->
+    <div class="w-full lg:w-[360px] bg-white border border-[#E0E0E0] rounded">
+      <div class="px-4 py-3 border-b border-[#E0E0E0]">
+        <h3 class="text-[13px] font-semibold text-[#333]">Recent Relocations ({{ recentRelocations.length }})</h3>
+      </div>
+      <div class="max-h-[400px] overflow-y-auto">
+        @for (v of recentRelocations; track v.id) {
+          <div class="px-4 py-2 border-b border-[#F0F0F0] text-[12px]">
+            <span class="font-medium text-[#0275D8]">{{ v.containerNumber }}</span>
+            <span class="text-[#888] ml-2">→ {{ v.yardBlockCode }}{{ v.bay ? ' Bay ' + v.bay : '' }}</span>
+            <span class="text-[#AAA] ml-2">{{ v.lastMovementAt | date:'HH:mm' }}</span>
+          </div>
+        } @empty {
+          <div class="px-4 py-6 text-center text-[12px] text-[#888]">No recent relocations</div>
+        }
+      </div>
+    </div>
+  </div>
+}

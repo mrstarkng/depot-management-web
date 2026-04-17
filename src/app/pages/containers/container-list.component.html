@@ -1,0 +1,252 @@
+<p-toast position="top-right" />
+
+<!-- Page Header -->
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <div class="text-[11px] text-[#888] mb-1">Home › Containers</div>
+    <h1 class="text-[20px] font-semibold text-[#333]">Containers</h1>
+  </div>
+  @if (authService.canManageYard()) {
+    <button (click)="openCreate()" class="bg-[#0275D8] text-white px-4 py-2 rounded text-[13px] font-medium hover:bg-[#025AA5]">
+      <i class="pi pi-plus mr-1.5"></i>New Container
+    </button>
+  }
+</div>
+
+<!-- Filter Bar -->
+<div class="bg-white border border-[#E0E0E0] rounded p-3 mb-4 flex flex-wrap items-center gap-3">
+  <div class="relative">
+    <i class="pi pi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-[#AAA] text-[11px]"></i>
+    <input [(ngModel)]="search" (ngModelChange)="page = 1" placeholder="Search number/owner..."
+           class="pl-7 pr-3 py-1.5 border border-[#CCC] rounded text-[13px] w-[200px] focus:border-[#0275D8] focus:outline-none">
+  </div>
+  <select [(ngModel)]="filterType" (ngModelChange)="page = 1" class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+    <option value="All">Type: All</option>
+    @for (t of typeOptions; track t) {
+      <option [value]="t">{{ t }}</option>
+    }
+  </select>
+  <select [(ngModel)]="filterSize" (ngModelChange)="page = 1" class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+    <option value="All">Size: All</option>
+    @for (s of sizeOptions; track s) {
+      <option [value]="s">{{ s }}ft</option>
+    }
+  </select>
+  <select [(ngModel)]="filterCondition" (ngModelChange)="page = 1" class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+    <option value="All">Condition: All</option>
+    <option value="Normal">Normal</option>
+    <option value="Damaged">Damaged</option>
+  </select>
+  <button (click)="resetFilters()" class="text-[12px] text-[#0275D8] hover:underline">Reset</button>
+</div>
+
+<!-- Table -->
+<div class="bg-white border border-[#E0E0E0] rounded overflow-hidden" (click)="openMenuId = null">
+  <table class="w-full text-[13px]">
+    <thead>
+      <tr class="bg-[#F5F5F5] border-b border-[#E0E0E0]">
+        @for (col of [
+          { key: 'containerNumber', label: 'Container #' },
+          { key: 'containerType', label: 'Type' },
+          { key: 'isoCode', label: 'ISO Code' },
+          { key: 'containerSize', label: 'Size' },
+          { key: 'containerOwner', label: 'Owner' }
+        ]; track col.key) {
+          <th (click)="handleSort($any(col.key))" class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] cursor-pointer select-none hover:text-[#333]">
+            {{ col.label }}
+            <i class="pi text-[10px] ml-0.5"
+               [class.pi-chevron-up]="sortDir === 'asc' && sortKey === col.key"
+               [class.pi-chevron-down]="sortDir === 'desc' && sortKey === col.key"
+               [class.text-[#0275D8]]="sortKey === col.key"
+               [class.text-[#CCC]]="sortKey !== col.key"></i>
+          </th>
+        }
+        <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] w-24">Condition</th>
+        <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] w-20">Status</th>
+        <th class="w-[60px]"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (c of paginated; track c.containerId) {
+        <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
+          <td class="px-3 py-2.5 font-mono font-medium text-[12px]">
+            <a [routerLink]="['/containers', c.containerNumber]" class="text-[#0275D8] hover:underline">
+              {{ c.containerNumber }}
+            </a>
+          </td>
+          <td class="px-3 py-2.5">{{ c.containerType }}</td>
+          <td class="px-3 py-2.5 font-mono text-[12px] text-[#666]">{{ c.isoCode || '—' }}</td>
+          <td class="px-3 py-2.5">{{ c.containerSize }}ft</td>
+          <td class="px-3 py-2.5">{{ c.containerOwner || '—' }}</td>
+          <td class="px-3 py-2.5"><app-status-badge [status]="$any(c.containerCondition)" /></td>
+          <td class="px-3 py-2.5">
+            @if (c.isInDepot) {
+              <span class="text-[11px] font-medium text-[#3C763D] bg-[#DFF0D8] px-1.5 py-0.5 rounded">In</span>
+            } @else {
+              <span class="text-[11px] font-medium text-[#888] bg-[#F5F5F5] px-1.5 py-0.5 rounded">Out</span>
+            }
+          </td>
+          <td class="px-3 py-2.5 relative">
+            <button (click)="toggleMenu(c.containerId, $event)" class="p-1 rounded hover:bg-[#E0E0E0] text-[#888]">
+              <i class="pi pi-ellipsis-v text-[12px]"></i>
+            </button>
+            @if (openMenuId === c.containerId) {
+              <div class="absolute right-3 top-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg z-20 py-1 min-w-[140px]">
+                @if (authService.canManageYard()) {
+                  <button (click)="openEdit(c)" class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-[#F5F5F5]">
+                    <i class="pi pi-pencil mr-2 text-[12px]"></i>Edit
+                  </button>
+                }
+                <a [routerLink]="['/containers', c.containerNumber]" class="block w-full text-left px-3 py-1.5 text-[13px] hover:bg-[#F5F5F5] text-[#555]">
+                  <i class="pi pi-eye mr-2 text-[12px]"></i>View Details
+                </a>
+              </div>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr><td colspan="8" class="text-center py-8 text-[#888] text-[13px]">
+          {{ loading ? 'Loading...' : 'No containers found' }}
+        </td></tr>
+      }
+    </tbody>
+  </table>
+  <app-pagination [currentPage]="page" [totalItems]="filtered.length" [itemsPerPage]="perPage"
+                  (pageChange)="page = $event" (itemsPerPageChange)="perPage = $event; page = 1" />
+</div>
+
+<!-- Create/Edit Slide-Over -->
+<app-slide-over [open]="slideOpen" [title]="editTarget ? 'Edit Container: ' + form.containerNumber : 'New Container'" (onClose)="slideOpen = false">
+  <div class="space-y-3">
+    @if (editTarget?.isInDepot && editTarget?.bay != null) {
+      <div class="flex items-start gap-2 px-3 py-2 bg-[#FCF8E3] border border-[#F0AD4E]/40 rounded text-[12px] text-[#8A6D3B]">
+        <i class="pi pi-exclamation-triangle text-[13px] mt-0.5 shrink-0"></i>
+        <div>
+          Container is currently in depot at
+          <span class="font-medium">{{ editTarget?.currentBlockCode }}</span>
+          bay <span class="font-medium">{{ editTarget?.bay }}</span>.
+          Changing size to a value that conflicts with the bay parity (20ft→odd, 40ft→even) will be rejected — relocate first.
+        </div>
+      </div>
+    }
+    <app-section-divider label="Identification" />
+
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <label class="text-[12px] font-medium text-[#555]">Container Number <span class="text-[#D9534F]">*</span></label>
+        <span class="text-[11px] text-[#888]">Format: MSCU1234567</span>
+      </div>
+      <input [(ngModel)]="form.containerNumber" (ngModelChange)="onContainerNumberChange($event)"
+             (blur)="checkContainerUniqueness()"
+             [disabled]="!!editTarget" maxlength="11" placeholder="e.g. MSCU1234567"
+             class="w-full border rounded px-3 py-1.5 text-[13px] disabled:bg-[#F5F5F5]"
+             [class.border-[#D9534F]]="errors['containerNumber']"
+             [class.border-[#CCC]]="!errors['containerNumber']">
+      <div class="text-[10px] text-[#888] mt-0.5">ISO 6346: owner code (3 letters) + equipment category (U/J/Z/R/S/F/B/V) + serial (6 digits) + check digit</div>
+      @if (errors['containerNumber']) {
+        <div class="text-[#D9534F] text-[11px] mt-1">{{ errors['containerNumber'] }}</div>
+      }
+      @if (containerNumberNotice) {
+        <div class="text-[#3C763D] text-[11px] mt-1">{{ containerNumberNotice }}</div>
+      }
+      @if (checkingUniqueness) {
+        <div class="text-[#888] text-[11px] mt-1">Checking availability...</div>
+      }
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Container Type <span class="text-[#D9534F]">*</span></label>
+        <select [(ngModel)]="form.containerType"
+                class="w-full border rounded px-3 py-1.5 text-[13px] bg-white"
+                [class.border-[#D9534F]]="errors['containerType']"
+                [class.border-[#CCC]]="!errors['containerType']">
+          @for (t of typeOptions; track t) { <option [value]="t">{{ t }}</option> }
+        </select>
+        @if (errors['containerType']) {
+          <div class="text-[#D9534F] text-[11px] mt-1">{{ errors['containerType'] }}</div>
+        }
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Container Size <span class="text-[#D9534F]">*</span></label>
+        <select [(ngModel)]="form.containerSize" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+          @for (s of sizeOptions; track s) { <option [value]="s">{{ s }}ft</option> }
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">ISO Code <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="form.isoCode" (ngModelChange)="form.isoCode = $event.toUpperCase()"
+             placeholder="e.g. 22G1" maxlength="10"
+             class="w-full border rounded px-3 py-1.5 text-[13px]"
+             [class.border-[#D9534F]]="errors['isoCode']"
+             [class.border-[#CCC]]="!errors['isoCode']">
+      @if (errors['isoCode']) {
+        <div class="text-[#D9534F] text-[11px] mt-1">{{ errors['isoCode'] }}</div>
+      }
+    </div>
+
+    <app-section-divider label="Weight" />
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Max Weight (kg) <span class="text-[#D9534F]">*</span></label>
+        <input type="number" [(ngModel)]="form.maximumWeight" min="1"
+               class="w-full border rounded px-3 py-1.5 text-[13px]"
+               [class.border-[#D9534F]]="errors['maximumWeight']"
+               [class.border-[#CCC]]="!errors['maximumWeight']">
+        @if (errors['maximumWeight']) {
+          <div class="text-[#D9534F] text-[11px] mt-1">{{ errors['maximumWeight'] }}</div>
+        }
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Tare Weight (kg) <span class="text-[#D9534F]">*</span></label>
+        <input type="number" [(ngModel)]="form.tareWeight" min="1"
+               class="w-full border rounded px-3 py-1.5 text-[13px]"
+               [class.border-[#D9534F]]="errors['tareWeight']"
+               [class.border-[#CCC]]="!errors['tareWeight']">
+        @if (errors['tareWeight']) {
+          <div class="text-[#D9534F] text-[11px] mt-1">{{ errors['tareWeight'] }}</div>
+        }
+      </div>
+    </div>
+
+    <app-section-divider label="Details" />
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Date of Manufacture</label>
+      <input type="date" [(ngModel)]="form.dateOfManufacture" [max]="today"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Container Owner <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="form.containerOwner" placeholder="e.g. Maersk"
+             class="w-full border rounded px-3 py-1.5 text-[13px]"
+             [class.border-[#D9534F]]="errors['containerOwner']"
+             [class.border-[#CCC]]="!errors['containerOwner']">
+      @if (errors['containerOwner']) {
+        <div class="text-[#D9534F] text-[11px] mt-1">{{ errors['containerOwner'] }}</div>
+      }
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Condition <span class="text-[#D9534F]">*</span></label>
+      <select [(ngModel)]="form.containerCondition" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+        <option value="Normal">Normal</option>
+        <option value="Damaged">Damaged</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Description</label>
+      <textarea [(ngModel)]="form.description" rows="2" placeholder="Optional notes..."
+                class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]"></textarea>
+    </div>
+
+    <div class="flex gap-2 pt-4 border-t border-[#E0E0E0] mt-4">
+      <button (click)="slideOpen = false"
+              class="flex-1 px-4 py-2 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
+      <button (click)="save()" [disabled]="saving"
+              class="flex-1 px-4 py-2 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
+        {{ saving ? 'Saving...' : (editTarget ? 'Update' : 'Create') }}
+      </button>
+    </div>
+  </div>
+</app-slide-over>

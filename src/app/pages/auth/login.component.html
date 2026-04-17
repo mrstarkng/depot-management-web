@@ -1,0 +1,65 @@
+<div class="min-h-screen bg-gradient-to-br from-[#1E2535] via-[#0F1620] to-[#1A3A5C] flex items-center justify-center">
+  <div class="bg-white rounded shadow-2xl w-[400px] max-w-[calc(100vw-2rem)] overflow-hidden">
+    <div class="bg-[#1E2535] px-5 py-4 flex items-center gap-3">
+      <div class="w-9 h-9 bg-[#0275D8] rounded flex items-center justify-center">
+        <i class="pi pi-warehouse text-white text-[16px]"></i>
+      </div>
+      <div>
+        <div class="text-[15px] font-bold text-white">Depot Management</div>
+        <div class="text-[11px] text-[#8BA0B8]">Container Management System v1.0.0</div>
+      </div>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" class="p-6 space-y-4">
+      @if (errorMessage) {
+        <div class="p-2.5 bg-[#FDF2F2] border border-[#F5C6CB] rounded text-[12px] text-[#D9534F]">
+          <i class="pi pi-exclamation-triangle mr-1.5"></i>{{ errorMessage }}
+        </div>
+      }
+
+      <div>
+        <label for="userName" class="block text-[12px] font-medium text-[#555] mb-1">Username</label>
+        <input id="userName" type="text" [(ngModel)]="userName" name="userName" autocomplete="username"
+               class="w-full px-3 py-2 border border-[#D0D0D0] rounded text-[13px] text-[#333] outline-none focus:border-[#0275D8] focus:ring-1 focus:ring-[#0275D8]/30 transition-colors"
+               placeholder="Enter username" />
+      </div>
+
+      <div>
+        <label for="password" class="block text-[12px] font-medium text-[#555] mb-1">Password</label>
+        <input id="password" type="password" [(ngModel)]="password" name="password" autocomplete="current-password"
+               class="w-full px-3 py-2 border border-[#D0D0D0] rounded text-[13px] text-[#333] outline-none focus:border-[#0275D8] focus:ring-1 focus:ring-[#0275D8]/30 transition-colors"
+               placeholder="Enter password" />
+      </div>
+
+      <label class="flex items-center gap-2 text-[12px] text-[#555]">
+        <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" class="rounded">
+        <span>Keep me signed in on this browser</span>
+      </label>
+
+      <button type="submit" [disabled]="loading"
+              class="w-full py-2.5 bg-[#0275D8] text-white text-[13px] font-semibold rounded hover:bg-[#025EB0] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+        @if (loading) {
+          <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          <span>Signing in...</span>
+        } @else {
+          <i class="pi pi-sign-in text-[13px]"></i>
+          <span>Sign In</span>
+        }
+      </button>
+
+      <div class="pt-1 border-t border-[#F0F0F0]">
+        <div class="text-center text-[11px] text-[#999] mb-2">
+          Development bootstrap accounts (password: <span class="font-mono text-[#666]">P&#64;ssw0rd</span>)
+        </div>
+        <div class="flex flex-wrap gap-1.5 justify-center">
+          @for (account of devAccounts; track account.userName) {
+            <button type="button" (click)="fillCredentials(account.userName)"
+                    class="px-2.5 py-1 text-[11px] border border-[#D0D0D0] rounded text-[#666] hover:bg-[#F5F5F5] hover:border-[#0275D8] hover:text-[#0275D8] transition-colors">
+              {{ account.label }}
+            </button>
+          }
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

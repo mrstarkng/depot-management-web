@@ -1,41 +1,133 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { CommonModule, DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 import { DepotService } from '../../core/services/depot.service';
-import { DepotContainer } from '../../core/models/depot.models';
+import { AuthService } from '../../core/services/auth.service';
+import {
+  DepotContainer, ContainerCurrentLocation, ContainerVisitHistory,
+  YardBlock, ContainerGrade, ContainerConditionStatus
+} from '../../core/models/depot.models';
+import { StatusBadgeComponent, SlideOverComponent, SectionDividerComponent } from '../../core/components';
 
 @Component({
   selector: 'depot-container-detail',
   standalone: true,
-  imports: [CommonModule],
-  template: `
-    <div class="page-header">
-      <h1>Container Detail</h1>
-      <p>{{ containerNumber }}</p>
-    </div>
-
-    <div class="surface-card p-4 border-round shadow-1">
-      <p class="text-color-secondary">Container detail view will be implemented here.</p>
-      <!-- TODO: container info, visit history, movement timeline -->
-    </div>
-  `,
+  imports: [CommonModule, FormsModule, RouterModule, ToastModule, DatePipe, StatusBadgeComponent, SlideOverComponent, SectionDividerComponent],
+  providers: [MessageService],
+  templateUrl: './container-detail.component.html',
 })
 export class ContainerDetailComponent implements OnInit {
   containerNumber = '';
-  container?: DepotContainer;
+  container: DepotContainer | null = null;
+  location: ContainerCurrentLocation | null = null;
+  visitHistory: ContainerVisitHistory[] = [];
+  yardBlocks: YardBlock[] = [];
+  yardBlockOptions: { label: string; value: number }[] = [];
+
+  // Relocate
+  relocateSlideOpen = false;
+  relocating = false;
+  relocateForm = { yardBlockId: 0, bay: 1, row: 1, tier: 1, reason: '' };
+
+  // Outbound
+  outboundSlideOpen = false;
+  outbounding = false;
+  outboundForm = { orderNumber: '', outboundVehicle: '' };
 
   constructor(
-    private readonly route: ActivatedRoute,
-    private readonly depotService: DepotService,
+    private route: ActivatedRoute,
+    private depotService: DepotService,
+    private messageService: MessageService,
+    public authService: AuthService,
   ) {}
 
-  ngOnInit(): void {
+  ngOnInit() {
     this.containerNumber = this.route.snapshot.paramMap.get('containerNumber') ?? '';
     if (this.containerNumber) {
-      this.depotService.getContainerByNumber(this.containerNumber).subscribe({
-        next: (data) => (this.container = data),
-        error: (err) => console.error('Failed to load container', err),
-      });
+      this.loadData(this.containerNumber);
     }
+    this.depotService.getYardBlocks().subscribe(blocks => {
+      this.yardBlocks = blocks;
+      this.yardBlockOptions = blocks.map(b => ({ label: `${b.code} (${b.blockType})`, value: b.id }));
+    });
+  }
+
+  loadData(cn: string) {
+    this.depotService.getContainerByNumber(cn).subscribe({
+      next: (data) => this.container = data,
+      error: () => this.container = null,
+    });
+    this.depotService.getCurrentLocation(cn).subscribe({
+      next: (loc) => this.location = loc,
+      error: () => this.location = null,
+    });
+    this.depotService.getVisitHistory(cn).subscribe(data => this.visitHistory = data);
+  }
+
+  openRelocateSlide() {
+    if (!this.authService.canManageYard()) return;
+    this.relocateForm = {
+      yardBlockId: this.yardBlocks[0]?.id || 0,
+      bay: 1, row: 1, tier: 1, reason: '',
+    };
+    this.relocateSlideOpen = true;
+  }
+
+  doRelocate() {
+    if (!this.authService.canManageYard()) return;
+    if (!this.container) return;
+    this.relocating = true;
+    this.depotService.relocateContainer({
+      containerNumber: this.container.containerNumber,
+      yardBlockId: this.relocateForm.yardBlockId,
+      bay: this.relocateForm.bay || undefined,
+      row: this.relocateForm.row || undefined,
+      tier: this.relocateForm.tier || undefined,
+      classification: (this.location?.classification || ContainerGrade.A) as ContainerGrade,
+      condition: (this.location?.condition || ContainerConditionStatus.Normal) as ContainerConditionStatus,
+      reason: this.relocateForm.reason,
+    }).subscribe({
+      next: () => {
+        this.relocating = false;
+        this.relocateSlideOpen = false;
+        this.messageService.add({ severity: 'success', summary: 'Relocated', detail: 'Container relocated successfully', life: 3000 });
+        this.loadData(this.container!.containerNumber);
+      },
+      error: (err) => {
+        this.relocating = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error?.Message || 'Relocate failed', life: 5000 });
+      },
+    });
+  }
+
+  openOutboundSlide() {
+    if (!this.authService.canGateInOut()) return;
+    this.outboundForm = { orderNumber: '', outboundVehicle: '' };
+    this.outboundSlideOpen = true;
+  }
+
+  doOutbound() {
+    if (!this.authService.canGateInOut()) return;
+    if (!this.container) return;
+    this.outbounding = true;
+    this.depotService.outboundContainer({
+      containerNumber: this.container.containerNumber,
+      orderNumber: this.outboundForm.orderNumber || undefined,
+      outboundVehicle: this.outboundForm.outboundVehicle,
+    }).subscribe({
+      next: () => {
+        this.outbounding = false;
+        this.outboundSlideOpen = false;
+        this.messageService.add({ severity: 'success', summary: 'Outbound', detail: 'Container released successfully', life: 3000 });
+        this.loadData(this.container!.containerNumber);
+      },
+      error: (err) => {
+        this.outbounding = false;
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error?.Message || 'Outbound failed', life: 5000 });
+      },
+    });
   }
 }

@@ -1,0 +1,49 @@
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <div class="text-[11px] text-[#888] mb-1">Home › Reference Data › Line Operators</div>
+    <h1 class="text-[20px] font-semibold text-[#333]">Line Operators</h1>
+  </div>
+</div>
+
+<div class="mb-4 p-3 bg-[#FCF8E3] border border-[#FAEBCC] rounded text-[12px] text-[#8A6D3B]">
+  The current backend read model exposes operator code and name for listing screens. Extended contact fields are not returned by the API yet.
+</div>
+
+<div class="bg-white border border-[#E0E0E0] rounded p-3 mb-4 flex flex-wrap items-center gap-3">
+  <input [(ngModel)]="search" (ngModelChange)="page = 1" placeholder="Search code or name..."
+         class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] w-[260px]">
+  <button (click)="search = ''; page = 1"
+          class="text-[12px] text-[#0275D8] hover:underline">Reset</button>
+</div>
+
+<div class="bg-white border border-[#E0E0E0] rounded overflow-hidden">
+  <table class="w-full text-[13px]">
+    <thead>
+      <tr class="bg-[#F5F5F5] border-b border-[#E0E0E0]">
+        <th (click)="handleSort('code')" class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] cursor-pointer select-none">
+          Code
+        </th>
+        <th (click)="handleSort('name')" class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] cursor-pointer select-none">
+          Name
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (operator of paginated; track operator.id) {
+        <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
+          <td class="px-3 py-2.5 font-mono text-[12px]">{{ operator.code }}</td>
+          <td class="px-3 py-2.5 font-medium">{{ operator.name }}</td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="2" class="text-center py-8 text-[#888] text-[13px]">
+            {{ loading ? 'Loading...' : 'No line operators found' }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+
+  <app-pagination [currentPage]="page" [totalItems]="filtered.length" [itemsPerPage]="perPage"
+                  (pageChange)="page = $event" (itemsPerPageChange)="perPage = $event; page = 1" />
+</div>

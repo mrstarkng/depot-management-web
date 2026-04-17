@@ -1,5 +1,4 @@
-// Enums matching backend DepotEnums.cs
-
+// ── Enums ──
 export enum YardBlockType {
   Physical = 'Physical',
   Virtual = 'Virtual',
@@ -28,47 +27,180 @@ export enum ContainerMovementType {
   Outbound = 'Outbound',
 }
 
-// Domain models
-
-export interface YardBlock {
-  id: number;
-  code: string;
-  blockType: YardBlockType;
-  bayCount?: number;
-  rowCount?: number;
-  tierCount?: number;
-}
-
-export interface DepotContainer {
-  id: number;
-  containerNumber: string;
-  containerType?: string;
-  isoCode?: string;
-  containerSize?: string;
-  maximumWeight?: number;
-  tareWeight?: number;
-  dateOfManufacture?: string;
-  containerOwner?: string;
-  containerCondition: ContainerConditionStatus;
-}
-
+// ── Master Data ──
 export interface LineOperator {
   id: number;
   code: string;
   name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  contactPerson?: string;
+  country?: string;
+  isActive?: boolean;
 }
 
 export interface Customer {
   id: number;
   taxCode: string;
   name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  contactPerson?: string;
+  isActive?: boolean;
+}
+
+// ── Yard ──
+export interface YardBlock {
+  id: number;
+  code: string;
+  name: string;
+  blockType: YardBlockType;
+  bayCount?: number;
+  rowCount?: number;
+  tierCount?: number;
+  maxCapacity?: number;
+  isActive: boolean;
+  description?: string;
+  activeContainerCount: number;
+}
+
+export interface CreateYardBlockRequest {
+  code: string;
+  name: string;
+  blockType: YardBlockType;
+  bayCount?: number;
+  rowCount?: number;
+  tierCount?: number;
+  maxCapacity?: number;
+  description?: string;
+}
+
+export interface UpdateYardBlockRequest extends CreateYardBlockRequest {}
+
+// ── Container ──
+export interface DepotContainer {
+  id: number;
+  containerNumber: string;
+  containerType: string;
+  isoCode: string;
+  containerSize: string;
+  maximumWeight: number;
+  tareWeight: number;
+  dateOfManufacture?: string;
+  containerOwner: string;
+  containerCondition: ContainerConditionStatus;
+  isActive: boolean;
+  description?: string;
+}
+
+export interface ContainerOverview {
+  containerId: number;
+  containerNumber: string;
+  containerType: string;
+  isoCode: string;
+  containerSize: string;
+  maximumWeight: number;
+  tareWeight: number;
+  dateOfManufacture?: string;
+  containerOwner: string;
+  containerCondition: ContainerConditionStatus;
+  isActive: boolean;
+  description?: string;
+  visitStatus?: ContainerVisitStatus;
+  currentBlockCode?: string;
+  bay?: number;
+  row?: number;
+  tier?: number;
+  lineOperatorCode?: string;
+  classification?: ContainerGrade;
+  inboundAt?: string;
+  outboundAt?: string;
+  isInDepot: boolean;
+}
+
+export interface CreateDepotContainerRequest {
+  containerNumber: string;
+  containerType: string;
+  isoCode: string;
+  containerSize: string;
+  maximumWeight: number;
+  tareWeight: number;
+  dateOfManufacture?: string;
+  containerOwner: string;
+  containerCondition: ContainerConditionStatus;
+  description?: string;
+}
+
+export interface UpdateDepotContainerRequest {
+  containerType: string;
+  isoCode: string;
+  containerSize: string;
+  maximumWeight: number;
+  tareWeight: number;
+  dateOfManufacture?: string;
+  containerOwner: string;
+  containerCondition: ContainerConditionStatus;
+  isActive: boolean;
+  description?: string;
+}
+
+export interface ContainerCurrentLocation {
+  containerNumber: string;
+  isInDepot: boolean;
+  visitStatus?: ContainerVisitStatus;
+  yardBlockCode?: string;
+  bay?: number;
+  row?: number;
+  tier?: number;
+  lineOperatorCode?: string;
+  classification?: ContainerGrade;
+  condition?: ContainerConditionStatus;
+  inboundAt?: string;
+  lastMovementAt?: string;
+}
+
+// ── Lifecycle ──
+export interface InboundContainerRequest {
+  containerNumber: string;
+  lineOperatorId: number;
+  yardBlockId: number;
+  bay?: number;
+  row?: number;
+  tier?: number;
+  classification: ContainerGrade;
+  condition: ContainerConditionStatus;
+  inboundVehicle: string;
+  inboundAt?: string;
+}
+
+export interface OutboundContainerRequest {
+  containerNumber: string;
+  orderNumber?: string;
+  outboundVehicle: string;
+  outboundAt?: string;
+}
+
+export interface RelocateContainerRequest {
+  containerNumber: string;
+  yardBlockId: number;
+  bay?: number;
+  row?: number;
+  tier?: number;
+  classification: ContainerGrade;
+  condition: ContainerConditionStatus;
+  reason: string;
+  movedAt?: string;
 }
 
 export interface ContainerVisit {
   id: number;
-  depotContainerId: number;
+  containerNumber: string;
   lineOperatorId: number;
+  lineOperatorCode: string;
   yardBlockId: number;
+  yardBlockCode: string;
   bay?: number;
   row?: number;
   tier?: number;
@@ -79,15 +211,16 @@ export interface ContainerVisit {
   inboundAt: string;
   outboundAt?: string;
   status: ContainerVisitStatus;
-  deliveryOrderId?: number;
+  deliveryOrderNumber?: string;
+  lastMovementAt?: string;
 }
 
 export interface ContainerMovement {
   id: number;
-  containerVisitId: number;
   movementType: ContainerMovementType;
   movementAt: string;
   yardBlockId: number;
+  yardBlockCode: string;
   bay?: number;
   row?: number;
   tier?: number;
@@ -95,20 +228,168 @@ export interface ContainerMovement {
   note?: string;
 }
 
+export interface ContainerVisitHistory {
+  visitId: number;
+  containerNumber: string;
+  lineOperatorCode: string;
+  inboundAt: string;
+  outboundAt?: string;
+  status: ContainerVisitStatus;
+  deliveryOrderNumber?: string;
+  movements: ContainerMovement[];
+}
+
+// ── Delivery Order ──
+export interface DeliveryOrderLine {
+  id: number;
+  containerType: string;
+  containerSize?: string;
+  isoCode?: string;
+  quantity: number;
+  releasedQuantity: number;
+  remainingQuantity: number;
+  availableInDepotQuantity: number;
+  canBeFulfilledFromDepotStock: boolean;
+}
+
 export interface DeliveryOrder {
   id: number;
+  lineOperatorId: number;
+  lineOperatorCode: string;
+  lineOperatorName: string;
+  customerId: number;
+  customerTaxCode: string;
+  customerName: string;
+  orderNumber: string;
+  orderDate?: string;
+  orderExpiryDate: string;
+  outboundVessel: string;
+  voyageNumber?: string;
+  remarks?: string;
+  isExpired: boolean;
+  hasRemainingQuantity: boolean;
+  isFulfilled: boolean;
+  totalRequestedQuantity: number;
+  totalReleasedQuantity: number;
+  totalRemainingQuantity: number;
+  lines: DeliveryOrderLine[];
+}
+
+export interface CreateDeliveryOrderRequest {
   lineOperatorId: number;
   customerId: number;
   orderNumber: string;
   orderExpiryDate: string;
-  outboundVessel?: string;
-  lines?: DeliveryOrderLine[];
+  outboundVessel: string;
+  lines: { containerType: string; quantity: number }[];
 }
 
-export interface DeliveryOrderLine {
-  id: number;
-  deliveryOrderId: number;
+export interface EligibleContainer {
+  containerId: number;
+  containerNumber: string;
   containerType: string;
-  quantity: number;
-  releasedQuantity: number;
+  lineOperatorCode: string;
+  yardBlockCode: string;
+  bay?: number;
+  row?: number;
+  tier?: number;
+  classification: ContainerGrade;
+  condition: ContainerConditionStatus;
+  inboundAt: string;
+}
+
+// ── Dashboard ──
+export interface BlockOccupancy {
+  blockCode: string;
+  blockName?: string;
+  activeContainers: number;
+  maxCapacity?: number;
+}
+
+export interface RecentActivityItem {
+  time: string;
+  containerNumber: string;
+  action: string;
+  blockCode: string;
+  operatorName?: string;
+}
+
+export interface ExpiringSoonOrder {
+  orderNumber: string;
+  operatorName: string;
+  expiryDate: string;
+  remainingContainers: number;
+}
+
+export interface DepotDashboard {
+  totalBlocks: number;
+  totalContainers: number;
+  activeVisits: number;
+  activeDeliveryOrders: number;
+  todayGateIn?: number;
+  todayGateOut?: number;
+  yardOccupancyPercent?: number;
+  blockOccupancies: BlockOccupancy[];
+  recentActivity?: RecentActivityItem[];
+  expiringSoonOrders?: ExpiringSoonOrder[];
+}
+
+// ── Yard Map ──
+export interface YardMapContainerSlot {
+  visitId: number;
+  containerNumber: string;
+  blockCode: string;
+  bay: number;
+  row: number;
+  tier: number;
+  containerType?: string;
+  containerSize?: string;
+  classification?: ContainerGrade;
+  condition?: ContainerConditionStatus;
+  lineOperatorCode?: string;
+  inboundAt?: string;
+  lastMovementAt?: string;
+  movementType?: string;
+}
+
+export interface YardMapBlock {
+  blockCode: string;
+  blockName?: string;
+  blockType?: YardBlockType | string;
+  bayCount: number;
+  rowCount: number;
+  tierCount?: number;
+  maxCapacity?: number;
+  occupiedSlots: number;
+  occupancyPercent: number;
+}
+
+export interface YardMapOverview {
+  blocks: YardMapBlock[];
+  slots: YardMapContainerSlot[];
+}
+
+export interface YardMapBlockDetail {
+  block: YardMapBlock;
+  slots: YardMapContainerSlot[];
+}
+
+export interface YardMapHeatmapCell {
+  blockCode: string;
+  bay?: number;
+  row?: number;
+  occupancyPercent?: number;
+  dwellTimeDays?: number;
+}
+
+export interface YardMapRealtimeEvent {
+  eventType: 'ContainerGateIn' | 'ContainerMoved' | 'ContainerGateOut' | string;
+  visitId: number;
+  containerNumber: string;
+  blockCode: string;
+  bay?: number;
+  row?: number;
+  tier?: number;
+  movementType?: string;
+  movedAt?: string;
 }

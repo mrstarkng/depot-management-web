@@ -1,0 +1,258 @@
+<p-toast position="top-right" />
+
+<!-- Breadcrumb & Header -->
+<div class="mb-4">
+  <div class="text-[11px] text-[#888] mb-1">
+    <a routerLink="/containers" class="hover:underline text-[#888]">Home › Containers</a>
+    › {{ container?.containerNumber || '...' }}
+  </div>
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+    <div class="flex items-center gap-3">
+      <a routerLink="/containers"
+         class="flex items-center justify-center w-8 h-8 rounded border border-[#E0E0E0] hover:bg-[#F5F5F5] text-[#666]">
+        <i class="pi pi-arrow-left text-[12px]"></i>
+      </a>
+      <h1 class="text-[20px] font-semibold text-[#333]">{{ container?.containerNumber || 'Loading...' }}</h1>
+      @if (container) {
+        <app-status-badge [status]="location?.isInDepot ? 'InDepot' : 'Inactive'" [label]="location?.isInDepot ? 'In Depot' : 'Released'" />
+      }
+    </div>
+    @if (location?.isInDepot && (authService.canManageYard() || authService.canGateInOut())) {
+      <div class="flex items-center gap-2">
+        @if (authService.canManageYard()) {
+          <button (click)="openRelocateSlide()"
+                  class="flex items-center gap-1.5 px-3 py-1.5 border border-[#CCC] rounded text-[13px] text-[#555] hover:bg-[#F5F5F5]">
+            <i class="pi pi-arrows-h text-[12px]"></i> Relocate
+          </button>
+        }
+        @if (authService.canGateInOut()) {
+          <button (click)="openOutboundSlide()"
+                  class="flex items-center gap-1.5 px-3 py-1.5 bg-[#8A6D3B] hover:bg-[#76592F] text-white text-[13px] rounded">
+            <i class="pi pi-sign-out text-[12px]"></i> Outbound
+          </button>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+@if (!container) {
+  <!-- Loading skeleton -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <div class="bg-white border border-[#E0E0E0] rounded h-[260px] animate-pulse"></div>
+    <div class="bg-white border border-[#E0E0E0] rounded h-[260px] animate-pulse"></div>
+  </div>
+} @else {
+  <!-- Info Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+    <!-- Container Info -->
+    <div class="bg-white border border-[#E0E0E0] rounded">
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-[#E0E0E0]">
+        <i class="pi pi-box text-[13px] text-[#0275D8]"></i>
+        <span class="text-[14px] font-semibold text-[#333]">Container Info</span>
+      </div>
+      <div class="px-5 py-4">
+        <div class="grid grid-cols-[120px_1fr] gap-y-3 text-[13px]">
+          <span class="text-[#888]">Number</span>
+          <span class="font-mono font-medium text-[#0275D8]">{{ container.containerNumber }}</span>
+          <span class="text-[#888]">Type</span>
+          <span class="text-[#333]">{{ container.containerType }}</span>
+          <span class="text-[#888]">ISO Code</span>
+          <span class="font-mono text-[12px] text-[#666]">{{ container.isoCode || '—' }}</span>
+          <span class="text-[#888]">Size</span>
+          <span class="text-[#333]">{{ container.containerSize }}ft</span>
+          <span class="text-[#888]">Owner</span>
+          <span class="text-[#333]">{{ container.containerOwner || '—' }}</span>
+          <span class="text-[#888]">Condition</span>
+          <span><app-status-badge [status]="$any(container.containerCondition)" /></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Location -->
+    <div class="bg-white border border-[#E0E0E0] rounded">
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-[#E0E0E0]">
+        <i class="pi pi-map-marker text-[13px] text-[#8A6D3B]"></i>
+        <span class="text-[14px] font-semibold text-[#333]">Current Location</span>
+      </div>
+      <div class="px-5 py-4">
+        @if (location && location.isInDepot) {
+          <div class="grid grid-cols-[120px_1fr] gap-y-3 text-[13px]">
+            <span class="text-[#888]">Status</span>
+            <span><app-status-badge status="InDepot" label="In Depot" /></span>
+            <span class="text-[#888]">Block</span>
+            <span class="font-semibold text-[#0275D8]">{{ location.yardBlockCode || '—' }}</span>
+            <span class="text-[#888]">Position</span>
+            <span class="text-[#333]">
+              @if (location.bay) {
+                Bay {{ location.bay }} / Row {{ location.row }} / Tier {{ location.tier }}
+              } @else {
+                <span class="text-[#888]">N/A</span>
+              }
+            </span>
+            <span class="text-[#888]">Classification</span>
+            <span class="text-[#333]">{{ location.classification ? 'Grade ' + location.classification : '—' }}</span>
+            <span class="text-[#888]">Line Operator</span>
+            <span class="text-[#333]">{{ location.lineOperatorCode || '—' }}</span>
+            <span class="text-[#888]">Inbound At</span>
+            <span class="text-[#333]">{{ location.inboundAt | date:'medium' }}</span>
+            <span class="text-[#888]">Last Movement</span>
+            <span class="text-[#333]">{{ location.lastMovementAt | date:'medium' }}</span>
+          </div>
+        } @else if (location && !location.isInDepot) {
+          <div class="text-center py-6">
+            <div class="w-10 h-10 mx-auto mb-3 rounded-full bg-[#F5F5F5] flex items-center justify-center">
+              <i class="pi pi-sign-out text-[16px] text-[#AAA]"></i>
+            </div>
+            <div class="text-[13px] text-[#888]">Container is not currently in depot</div>
+          </div>
+        } @else {
+          <div class="text-center py-6 text-[13px] text-[#888]">Loading location...</div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Visit & Movement History -->
+  <div class="bg-white border border-[#E0E0E0] rounded">
+    <div class="flex items-center gap-2 px-5 py-3 border-b border-[#E0E0E0]">
+      <i class="pi pi-history text-[13px] text-[#555]"></i>
+      <span class="text-[14px] font-semibold text-[#333]">Visit & Movement History</span>
+      <span class="ml-1 text-[12px] text-[#888]">({{ visitHistory.length }})</span>
+    </div>
+    <div class="px-5 py-4">
+      @if (visitHistory.length === 0) {
+        <div class="text-center py-8">
+          <div class="w-10 h-10 mx-auto mb-3 rounded-full bg-[#F5F5F5] flex items-center justify-center">
+            <i class="pi pi-inbox text-[16px] text-[#AAA]"></i>
+          </div>
+          <div class="text-[13px] text-[#888]">No visit history</div>
+        </div>
+      }
+
+      @for (visit of visitHistory; track visit.visitId; let last = $last) {
+        <div [class.mb-5]="!last" [class.pb-5]="!last" [class.border-b]="!last" class="border-[#F0F0F0]">
+          <!-- Visit header -->
+          <div class="flex items-center gap-3 mb-3">
+            <app-status-badge [status]="visit.status === 'InDepot' ? 'InDepot' : 'Inactive'" [label]="visit.status" />
+            <span class="text-[13px] font-medium text-[#333]">{{ visit.lineOperatorCode }}</span>
+            <span class="text-[12px] text-[#888]">
+              {{ visit.inboundAt | date:'mediumDate' }}
+              @if (visit.outboundAt) { → {{ visit.outboundAt | date:'mediumDate' }} }
+            </span>
+            @if (visit.deliveryOrderNumber) {
+              <a [routerLink]="['/delivery-orders', visit.deliveryOrderNumber]"
+                 class="text-[12px] text-[#8A6D3B] hover:underline flex items-center gap-1">
+                <i class="pi pi-file-edit text-[10px]"></i> {{ visit.deliveryOrderNumber }}
+              </a>
+            }
+          </div>
+
+          <!-- Movement timeline -->
+          <div class="ml-3 border-l-2 border-[#E0E0E0] pl-5">
+            @for (m of visit.movements; track m.id) {
+              <div class="relative mb-3 last:mb-0">
+                <div class="absolute -left-[27px] top-0.5 w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px]"
+                     [class.bg-[#3C763D]]="m.movementType === 'Inbound'"
+                     [class.bg-[#0275D8]]="m.movementType === 'Relocated'"
+                     [class.bg-[#D9534F]]="m.movementType === 'Outbound'">
+                  <i class="pi"
+                     [class.pi-sign-in]="m.movementType === 'Inbound'"
+                     [class.pi-arrows-h]="m.movementType === 'Relocated'"
+                     [class.pi-sign-out]="m.movementType === 'Outbound'"></i>
+                </div>
+                <div>
+                  <div class="text-[13px] font-medium text-[#333]">{{ m.movementType }}</div>
+                  <div class="flex flex-wrap items-center gap-3 mt-1 text-[12px] text-[#888]">
+                    <span class="flex items-center gap-1">
+                      <i class="pi pi-clock text-[10px]"></i> {{ m.movementAt | date:'medium' }}
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <i class="pi pi-map-marker text-[10px]"></i> {{ m.yardBlockCode }}
+                      @if (m.bay) { / {{ m.bay }}-{{ m.row }}-{{ m.tier }} }
+                    </span>
+                    @if (m.vehicle) {
+                      <span class="flex items-center gap-1">
+                        <i class="pi pi-truck text-[10px]"></i> {{ m.vehicle }}
+                      </span>
+                    }
+                    @if (m.note) {
+                      <span class="text-[#666]">{{ m.note }}</span>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Relocate Slide-Over -->
+<app-slide-over [open]="relocateSlideOpen" (onClose)="relocateSlideOpen = false" title="Relocate Container">
+  <div class="space-y-3">
+    <app-section-divider label="Target Location" />
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Target Block <span class="text-[#D9534F]">*</span></label>
+      <select [(ngModel)]="relocateForm.yardBlockId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+        @for (opt of yardBlockOptions; track opt.value) {
+          <option [ngValue]="opt.value">{{ opt.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="grid grid-cols-3 gap-3">
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Bay</label>
+        <input type="number" [(ngModel)]="relocateForm.bay" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Row</label>
+        <input type="number" [(ngModel)]="relocateForm.row" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Tier</label>
+        <input type="number" [(ngModel)]="relocateForm.tier" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Reason</label>
+      <input [(ngModel)]="relocateForm.reason" placeholder="Reason for relocating"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+    <div class="flex gap-2 pt-4 border-t border-[#E0E0E0] mt-4">
+      <button (click)="relocateSlideOpen = false"
+              class="flex-1 px-4 py-2 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
+      <button (click)="doRelocate()" [disabled]="relocating"
+              class="flex-1 px-4 py-2 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
+        {{ relocating ? 'Relocating...' : 'Relocate' }}
+      </button>
+    </div>
+  </div>
+</app-slide-over>
+
+<!-- Outbound Slide-Over -->
+<app-slide-over [open]="outboundSlideOpen" (onClose)="outboundSlideOpen = false" title="Outbound Container">
+  <div class="space-y-3">
+    <app-section-divider label="Release Details" />
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Delivery Order Number</label>
+      <input [(ngModel)]="outboundForm.orderNumber" placeholder="e.g. DO-PRD-OPEN-01"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Vehicle <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="outboundForm.outboundVehicle" placeholder="e.g. TRUCK-OUT-001"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+    <div class="flex gap-2 pt-4 border-t border-[#E0E0E0] mt-4">
+      <button (click)="outboundSlideOpen = false"
+              class="flex-1 px-4 py-2 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
+      <button (click)="doOutbound()" [disabled]="outbounding"
+              class="flex-1 px-4 py-2 text-[13px] bg-[#8A6D3B] text-white rounded hover:bg-[#76592F] disabled:opacity-50">
+        {{ outbounding ? 'Processing...' : 'Outbound' }}
+      </button>
+    </div>
+  </div>
+</app-slide-over>

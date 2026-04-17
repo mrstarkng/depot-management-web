@@ -1,0 +1,187 @@
+<!-- Page Header -->
+<div class="mb-4">
+  <div class="text-[11px] text-[#888] mb-1">Home › Dashboard</div>
+  <h1 class="text-[20px] font-semibold text-[#333]">Dashboard</h1>
+</div>
+
+<!-- Loading skeleton -->
+@if (loading) {
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    @for (i of [1,2,3,4]; track i) {
+      <div class="bg-white border border-[#E0E0E0] rounded p-4 animate-pulse">
+        <div class="h-4 bg-[#E0E0E0] rounded w-20 mb-2"></div>
+        <div class="h-8 bg-[#E0E0E0] rounded w-16"></div>
+      </div>
+    }
+  </div>
+}
+
+@if (dashboard) {
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+    <!-- Total InDepot -->
+    <a routerLink="/operations" class="bg-white border border-[#E0E0E0] rounded p-4 hover:border-[#0275D8] hover:shadow-sm transition-all cursor-pointer block">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-[#D9EDF7] rounded flex items-center justify-center">
+          <i class="pi pi-database text-[16px] text-[#0275D8]"></i>
+        </div>
+        <div>
+          <div class="text-[26px] font-bold text-[#0275D8]">{{ dashboard.activeVisits }}</div>
+          <div class="text-[11px] text-[#888]">Total InDepot</div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Today Gate-In -->
+    <a routerLink="/operations" class="bg-white border border-[#E0E0E0] rounded p-4 hover:border-[#3C763D] hover:shadow-sm transition-all cursor-pointer block">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-[#DFF0D8] rounded flex items-center justify-center">
+          <i class="pi pi-sign-in text-[16px] text-[#3C763D]"></i>
+        </div>
+        <div>
+          <div class="text-[26px] font-bold text-[#3C763D]">{{ dashboard.todayGateIn ?? 0 }}</div>
+          <div class="text-[11px] text-[#888]">Today Gate-In</div>
+        </div>
+      </div>
+    </a>
+
+    <!-- Today Gate-Out -->
+    <div class="bg-white border border-[#E0E0E0] rounded p-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-[#FCF8E3] rounded flex items-center justify-center">
+          <i class="pi pi-sign-out text-[16px] text-[#8A6D3B]"></i>
+        </div>
+        <div>
+          <div class="text-[26px] font-bold text-[#8A6D3B]">{{ dashboard.todayGateOut ?? 0 }}</div>
+          <div class="text-[11px] text-[#888]">Today Gate-Out</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Yard Occupancy -->
+    <div class="bg-white border border-[#E0E0E0] rounded p-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-[#F2DEDE] rounded flex items-center justify-center">
+          <i class="pi pi-chart-bar text-[16px] text-[#A94442]"></i>
+        </div>
+        <div>
+          <div class="text-[26px] font-bold text-[#A94442]">{{ dashboard.yardOccupancyPercent ?? 0 }}%</div>
+          <div class="text-[11px] text-[#888]">Yard Occupancy</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Occupancy by Block (Horizontal Bar Chart) -->
+  <div class="bg-white border border-[#E0E0E0] rounded mb-5">
+    <div class="px-4 py-3 border-b border-[#F0F0F0]">
+      <h2 class="text-[13px] font-semibold text-[#333]">Occupancy by Block</h2>
+    </div>
+    <div class="p-4 space-y-3">
+      @for (b of dashboard.blockOccupancies; track b.blockCode) {
+        <div class="flex items-center gap-3">
+          <div class="w-[80px] text-[12px] font-mono font-medium text-[#333] shrink-0">{{ b.blockCode }}</div>
+          <div class="flex-1 bg-[#F0F0F0] rounded-full h-[20px] overflow-hidden">
+            <div class="h-full rounded-full transition-all"
+                 [style.width.%]="getOccupancyPercent(b)"
+                 [style.min-width.px]="b.activeContainers > 0 ? 8 : null"
+                 [class.bg-[#D9534F]]="isHighOccupancy(b)"
+                 [class.bg-[#0275D8]]="!isHighOccupancy(b)">
+            </div>
+          </div>
+          <div class="w-[100px] text-right text-[12px] shrink-0"
+               [class.text-[#D9534F]]="isHighOccupancy(b)"
+               [class.text-[#555]]="!isHighOccupancy(b)">
+            {{ getOccupancyPercent(b) }}% ({{ b.activeContainers }}@if (b.maxCapacity) {/{{ b.maxCapacity }}})
+          </div>
+        </div>
+      } @empty {
+        <div class="text-center py-4 text-[13px] text-[#888]">No block data available</div>
+      }
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- Recent Activity -->
+    <div class="bg-white border border-[#E0E0E0] rounded">
+      <div class="px-4 py-3 border-b border-[#F0F0F0]">
+        <h2 class="text-[13px] font-semibold text-[#333]">Recent Activity</h2>
+        <div class="text-[11px] text-[#888]">Last 20 movements</div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-[12px]">
+          <thead>
+            <tr class="bg-[#F9F9F9] border-b border-[#E0E0E0]">
+              <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#888]">Time</th>
+              <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#888]">Container</th>
+              <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#888]">Action</th>
+              <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#888]">Block</th>
+              <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#888]">Operator</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (dashboard.recentActivity && dashboard.recentActivity.length) {
+              @for (a of dashboard.recentActivity; track $index) {
+                <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
+                  <td class="px-3 py-2 text-[#888]">{{ a.time | date:'HH:mm' }}</td>
+                  <td class="px-3 py-2 font-medium text-[#0275D8]">{{ a.containerNumber }}</td>
+                  <td class="px-3 py-2">
+                    <span class="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                          [class.bg-[#DFF0D8]]="a.action === 'Gate-In'"
+                          [class.text-[#3C763D]]="a.action === 'Gate-In'"
+                          [class.bg-[#D9EDF7]]="a.action === 'Relocate'"
+                          [class.text-[#0275D8]]="a.action === 'Relocate'"
+                          [class.bg-[#F2DEDE]]="a.action === 'Gate-Out'"
+                          [class.text-[#A94442]]="a.action === 'Gate-Out'">
+                      {{ a.action }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2">{{ a.blockCode }}</td>
+                  <td class="px-3 py-2 text-[#888]">{{ a.operatorName ?? '—' }}</td>
+                </tr>
+              }
+            } @else {
+              <tr><td colspan="5" class="text-center py-6 text-[#888]">No recent activity</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Expiring Soon -->
+    <div class="bg-white border border-[#E0E0E0] rounded">
+      <div class="px-4 py-3 border-b border-[#F0F0F0]">
+        <h2 class="text-[13px] font-semibold text-[#333]">Expiring Soon</h2>
+        <div class="text-[11px] text-[#888]">Orders expiring within 7 days</div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-[12px]">
+          <thead>
+            <tr class="bg-[#F9F9F9] border-b border-[#E0E0E0]">
+              <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#888]">Order #</th>
+              <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#888]">Operator</th>
+              <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#888]">Expiry</th>
+              <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#888]">Remaining</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (dashboard.expiringSoonOrders && dashboard.expiringSoonOrders.length) {
+              @for (o of dashboard.expiringSoonOrders; track o.orderNumber) {
+                <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
+                  <td class="px-3 py-2 font-medium">
+                    <a [routerLink]="'/delivery-orders/' + o.orderNumber" class="text-[#0275D8] hover:underline">{{ o.orderNumber }}</a>
+                  </td>
+                  <td class="px-3 py-2">{{ o.operatorName }}</td>
+                  <td class="px-3 py-2 text-[#D9534F] font-medium">{{ o.expiryDate | date:'MM/dd' }}</td>
+                  <td class="px-3 py-2">{{ o.remainingContainers }} containers</td>
+                </tr>
+              }
+            } @else {
+              <tr><td colspan="4" class="text-center py-6 text-[#888]">No orders expiring soon</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

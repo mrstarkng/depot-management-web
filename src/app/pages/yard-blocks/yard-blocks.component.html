@@ -1,0 +1,170 @@
+<!-- Page Header -->
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <div class="text-[11px] text-[#888] mb-1">Home › Yard Blocks</div>
+    <h1 class="text-[20px] font-semibold text-[#333]">Yard Blocks</h1>
+  </div>
+  @if (authService.canManageYard()) {
+    <button (click)="openCreate()" class="bg-[#0275D8] text-white px-4 py-2 rounded text-[13px] font-medium hover:bg-[#025AA5]">
+      <i class="pi pi-plus mr-1.5"></i>New Block
+    </button>
+  }
+</div>
+
+<!-- Filter Bar -->
+<div class="bg-white border border-[#E0E0E0] rounded p-3 mb-4 flex flex-wrap items-center gap-3">
+  <input [(ngModel)]="search" (ngModelChange)="page = 1" placeholder="Search by code/name..."
+         class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] w-[200px]">
+  <select [(ngModel)]="filterType" (ngModelChange)="page = 1" class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+    <option value="All">All Types</option>
+    <option value="Physical">Physical</option>
+    <option value="Virtual">Virtual</option>
+  </select>
+  <select [(ngModel)]="filterStatus" (ngModelChange)="page = 1" class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+    <option value="All">All Status</option>
+    <option value="Active">Active</option>
+    <option value="Inactive">Inactive</option>
+  </select>
+  <button (click)="resetFilter()" class="text-[12px] text-[#0275D8] hover:underline">Reset</button>
+</div>
+
+<!-- Table -->
+<div class="bg-white border border-[#E0E0E0] rounded overflow-hidden" (click)="openMenuId = null">
+  <table class="w-full text-[13px]">
+    <thead>
+      <tr class="bg-[#F5F5F5] border-b border-[#E0E0E0]">
+        @for (col of [
+          { key: 'code', label: 'Code' },
+          { key: 'blockType', label: 'Type' },
+          { key: 'bayCount', label: 'Bays' },
+          { key: 'rowCount', label: 'Rows' },
+          { key: 'tierCount', label: 'Tiers' },
+          { key: 'activeContainerCount', label: 'Containers' }
+        ]; track col.key) {
+          <th (click)="handleSort($any(col.key))" class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] cursor-pointer select-none hover:text-[#333]">
+            {{ col.label }}
+            <i class="pi text-[10px] ml-0.5"
+               [class.pi-chevron-up]="sortDir === 'asc' && sortKey === col.key"
+               [class.pi-chevron-down]="sortDir === 'desc' && sortKey === col.key"
+               [class.text-[#0275D8]]="sortKey === col.key"
+               [class.text-[#CCC]]="sortKey !== col.key"></i>
+          </th>
+        }
+        <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Status</th>
+        <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] w-[60px]"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (block of paginated; track block.id) {
+        <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
+          <td class="px-3 py-2.5 font-medium text-[#333]">{{ block.code }}</td>
+          <td class="px-3 py-2.5"><app-status-badge [status]="$any(block.blockType)" /></td>
+          <td class="px-3 py-2.5">{{ block.blockType === 'Physical' ? block.bayCount : '—' }}</td>
+          <td class="px-3 py-2.5">{{ block.blockType === 'Physical' ? block.rowCount : '—' }}</td>
+          <td class="px-3 py-2.5">{{ block.blockType === 'Physical' ? block.tierCount : '—' }}</td>
+          <td class="px-3 py-2.5">
+            <span class="font-medium text-[#0275D8]">{{ block.activeContainerCount }}</span>
+          </td>
+          <td class="px-3 py-2.5">
+            <app-status-badge [status]="block.isActive ? 'Active' : 'Inactive'" />
+          </td>
+          <td class="px-3 py-2.5 relative">
+            @if (authService.canManageYard()) {
+              <button (click)="toggleMenu(block.id, $event)" class="p-1 rounded hover:bg-[#E0E0E0] text-[#888]">
+                <i class="pi pi-ellipsis-v text-[12px]"></i>
+              </button>
+              @if (openMenuId === block.id) {
+                <div class="absolute right-3 top-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg z-20 py-1 min-w-[150px]">
+                  <button (click)="openEdit(block)" class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-[#F5F5F5]">
+                    <i class="pi pi-pencil mr-2 text-[12px]"></i>Edit
+                  </button>
+                  @if (block.blockType === 'Physical') {
+                    <a href="/yard-map?focus={{ block.code }}" class="block w-full text-left px-3 py-1.5 text-[13px] hover:bg-[#F5F5F5] text-[#555]">
+                      <i class="pi pi-map mr-2 text-[12px]"></i>View on Map
+                    </a>
+                  }
+                  <button (click)="confirmDelete(block)" class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-[#F5F5F5] text-[#D9534F]">
+                    <i class="pi pi-trash mr-2 text-[12px]"></i>Delete
+                  </button>
+                </div>
+              }
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr><td colspan="8" class="text-center py-8 text-[#888] text-[13px]">
+          {{ loading ? 'Loading...' : 'No yard blocks found' }}
+        </td></tr>
+      }
+    </tbody>
+  </table>
+  <app-pagination [currentPage]="page" [totalItems]="filtered.length" [itemsPerPage]="perPage"
+                  (pageChange)="page = $event" (itemsPerPageChange)="perPage = $event; page = 1" />
+</div>
+
+<!-- Create/Edit Slide-Over -->
+<app-slide-over [open]="slideOpen" [title]="editMode ? 'Edit Yard Block: ' + form.code : 'New Yard Block'" (onClose)="slideOpen = false">
+  <div class="space-y-3">
+    <app-section-divider label="Identification" />
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Code <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="form.code" [disabled]="editMode" maxlength="20"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] disabled:bg-[#F5F5F5]">
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Name <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="form.name" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Block Type <span class="text-[#D9534F]">*</span></label>
+      <select [(ngModel)]="form.blockType" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+        <option value="Physical">Physical</option>
+        <option value="Virtual">Virtual</option>
+      </select>
+    </div>
+
+    @if (form.blockType === 'Physical') {
+      <app-section-divider label="Dimensions" />
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Bay Count</label>
+          <input type="number" [(ngModel)]="form.bayCount" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+        </div>
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Row Count</label>
+          <input type="number" [(ngModel)]="form.rowCount" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+        </div>
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Tier Count</label>
+          <input type="number" [(ngModel)]="form.tierCount" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+        </div>
+      </div>
+      @if (computedCapacity) {
+        <div class="text-[12px] text-[#888]">
+          Max Capacity: <span class="font-semibold text-[#333]">{{ computedCapacity }}</span> TEU
+        </div>
+      }
+    }
+
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Description</label>
+      <textarea [(ngModel)]="form.description" rows="2" placeholder="Optional description"
+                class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]"></textarea>
+    </div>
+
+    <div class="flex gap-2 pt-4 border-t border-[#E0E0E0] mt-4">
+      <button (click)="slideOpen = false"
+              class="flex-1 px-4 py-2 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
+      <button (click)="save()" [disabled]="saving || !form.code || !form.name"
+              class="flex-1 px-4 py-2 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
+        {{ saving ? 'Saving...' : (editMode ? 'Update' : 'Create') }}
+      </button>
+    </div>
+  </div>
+</app-slide-over>
+
+<!-- Confirm Dialog -->
+<app-confirm-dialog [open]="confirmOpen" [title]="confirmTitle" [message]="confirmMessage" [variant]="confirmVariant"
+                    (onConfirm)="onConfirm()" (onCancel)="onCancelConfirm()" />
+
+<p-toast position="top-right" />

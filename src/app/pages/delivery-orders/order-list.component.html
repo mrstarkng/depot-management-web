@@ -1,0 +1,283 @@
+<p-toast position="top-right" />
+
+<!-- Page Header -->
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <div class="text-[11px] text-[#888] mb-1">Home › Delivery Orders</div>
+    <h1 class="text-[20px] font-semibold text-[#333]">Delivery Orders</h1>
+  </div>
+  @if (authService.canManageOrders()) {
+    <button (click)="openCreate()" class="bg-[#0275D8] text-white px-4 py-2 rounded text-[13px] font-medium hover:bg-[#025AA5]">
+      <i class="pi pi-plus mr-1.5"></i>New Order
+    </button>
+  }
+</div>
+
+<!-- Filter Bar -->
+<div class="bg-white border border-[#E0E0E0] rounded p-3 mb-4 flex flex-wrap items-center gap-3">
+  <div class="relative">
+    <i class="pi pi-search absolute left-2.5 top-1/2 -translate-y-1/2 text-[#AAA] text-[11px]"></i>
+    <input [(ngModel)]="search" (ngModelChange)="page = 1" placeholder="Search order #..."
+           class="pl-7 pr-3 py-1.5 border border-[#CCC] rounded text-[13px] w-[200px] focus:border-[#0275D8] focus:outline-none">
+  </div>
+  <select [(ngModel)]="filterStatus" (ngModelChange)="page = 1; loadOrders()" class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+    <option value="All">Status: All</option>
+    <option value="Open">Open</option>
+    <option value="Fulfilled">Fulfilled</option>
+    <option value="Expired">Expired</option>
+  </select>
+  <select [(ngModel)]="filterOperator" (ngModelChange)="page = 1" class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+    <option [ngValue]="0">Operator: All</option>
+    @for (op of lineOperators; track op.id) {
+      <option [ngValue]="op.id">{{ op.code }}</option>
+    }
+  </select>
+  <input type="date" [(ngModel)]="filterDateFrom" (ngModelChange)="page = 1" placeholder="From"
+         class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] w-[140px]">
+  <input type="date" [(ngModel)]="filterDateTo" (ngModelChange)="page = 1" placeholder="To"
+         class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] w-[140px]">
+  <button (click)="resetFilters()" class="text-[12px] text-[#0275D8] hover:underline">Reset</button>
+</div>
+
+<!-- Table -->
+<div class="bg-white border border-[#E0E0E0] rounded overflow-hidden mb-4">
+  <table class="w-full text-[13px]">
+    <thead>
+      <tr class="bg-[#F5F5F5] border-b border-[#E0E0E0]">
+        @for (col of [
+          { key: 'orderNumber', label: 'Order #' },
+          { key: 'lineOperatorName', label: 'Operator' },
+          { key: 'customerName', label: 'Customer' },
+          { key: 'orderExpiryDate', label: 'Expiry' }
+        ]; track col.key) {
+          <th (click)="handleSort($any(col.key))" class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] cursor-pointer select-none hover:text-[#333]">
+            {{ col.label }}
+            <i class="pi text-[10px] ml-0.5"
+               [class.pi-chevron-up]="sortDir === 'asc' && sortKey === col.key"
+               [class.pi-chevron-down]="sortDir === 'desc' && sortKey === col.key"
+               [class.text-[#0275D8]]="sortKey === col.key"
+               [class.text-[#CCC]]="sortKey !== col.key"></i>
+          </th>
+        }
+        <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Requested</th>
+        <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Released</th>
+        <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Remaining</th>
+        <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] w-24">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (o of paginated; track o.id) {
+        <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9] cursor-pointer"
+            [class.bg-[#EFF8FF]]="selectedOrder?.id === o.id"
+            (click)="selectedOrder = selectedOrder?.id === o.id ? null : o">
+          <td class="px-3 py-2.5 font-medium">
+            <a [routerLink]="['/delivery-orders', o.orderNumber]" class="text-[#0275D8] hover:underline" (click)="$event.stopPropagation()">
+              {{ o.orderNumber }}
+            </a>
+          </td>
+          <td class="px-3 py-2.5">{{ o.lineOperatorName }}</td>
+          <td class="px-3 py-2.5">{{ o.customerName }}</td>
+          <td class="px-3 py-2.5 text-[#666]">{{ o.orderExpiryDate }}</td>
+          <td class="px-3 py-2.5 font-medium">{{ o.totalRequestedQuantity }}</td>
+          <td class="px-3 py-2.5">{{ o.totalReleasedQuantity }}</td>
+          <td class="px-3 py-2.5 font-medium"
+              [class.text-[#3C763D]]="o.totalRemainingQuantity > 0"
+              [class.text-[#999]]="o.totalRemainingQuantity === 0">
+            {{ o.totalRemainingQuantity }}
+          </td>
+          <td class="px-3 py-2.5">
+            <app-status-badge [status]="$any(getOrderBadgeStatus(o))" [label]="getOrderStatus(o)" />
+          </td>
+        </tr>
+      } @empty {
+        <tr><td colspan="8" class="text-center py-8 text-[#888] text-[13px]">
+          {{ loading ? 'Loading...' : 'No delivery orders found' }}
+        </td></tr>
+      }
+    </tbody>
+  </table>
+  <app-pagination [currentPage]="page" [totalItems]="filtered.length" [itemsPerPage]="perPage"
+                  (pageChange)="page = $event" (itemsPerPageChange)="perPage = $event; page = 1" />
+</div>
+
+<!-- Inline Detail Panel -->
+@if (selectedOrder) {
+  <div class="bg-white border border-[#E0E0E0] rounded p-5">
+    <div class="flex items-center justify-between mb-4 pb-3 border-b border-[#F0F0F0]">
+      <div class="flex items-center gap-3">
+        <span class="text-[16px] font-semibold text-[#333]">Order: {{ selectedOrder.orderNumber }}</span>
+        <app-status-badge [status]="$any(getOrderBadgeStatus(selectedOrder))" [label]="getOrderStatus(selectedOrder)" />
+      </div>
+      <div class="flex items-center gap-2">
+        <a [routerLink]="['/delivery-orders', selectedOrder.orderNumber]"
+           class="text-[12px] text-[#0275D8] hover:underline">View Full Details</a>
+        <button (click)="selectedOrder = null" class="p-1.5 rounded hover:bg-[#F5F5F5] text-[#666]">
+          <i class="pi pi-times text-[12px]"></i>
+        </button>
+      </div>
+    </div>
+
+    <app-section-divider label="Header" />
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4 text-[12px]">
+      <div><span class="text-[#888] block text-[11px]">Line Operator</span>{{ selectedOrder.lineOperatorName }}</div>
+      <div><span class="text-[#888] block text-[11px]">Customer</span>{{ selectedOrder.customerName }}</div>
+      <div><span class="text-[#888] block text-[11px]">Expiry Date</span>{{ selectedOrder.orderExpiryDate }}</div>
+      <div><span class="text-[#888] block text-[11px]">Outbound Vessel</span>{{ selectedOrder.outboundVessel || '—' }}</div>
+      <div><span class="text-[#888] block text-[11px]">Voyage Number</span>{{ selectedOrder.voyageNumber || '—' }}</div>
+      <div><span class="text-[#888] block text-[11px]">Remarks</span>{{ selectedOrder.remarks || '—' }}</div>
+    </div>
+
+    <app-section-divider label="Order Lines" />
+    <table class="w-full text-[12px] mb-3">
+      <thead>
+        <tr class="bg-[#F5F5F5] border-b border-[#E0E0E0]">
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Container Type</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Qty</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Released</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Remaining</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (l of selectedOrder.lines; track l.id) {
+          <tr class="border-b border-[#F0F0F0]" [class.opacity-50]="l.remainingQuantity === 0">
+            <td class="px-3 py-2" [class.line-through]="l.remainingQuantity === 0">{{ l.containerType }}</td>
+            <td class="px-3 py-2">{{ l.quantity }}</td>
+            <td class="px-3 py-2">{{ l.releasedQuantity }}</td>
+            <td class="px-3 py-2 font-medium"
+                [class.text-[#3C763D]]="l.remainingQuantity > 0"
+                [class.text-[#999]]="l.remainingQuantity === 0">
+              {{ l.remainingQuantity }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <div class="text-[12px] text-[#666] px-3">
+      Total: <strong>{{ selectedOrder.totalRequestedQuantity }}</strong> |
+      Released: <strong>{{ selectedOrder.totalReleasedQuantity }}</strong> |
+      Remaining: <strong [class.text-[#3C763D]]="selectedOrder.totalRemainingQuantity > 0"
+                         [class.text-[#999]]="selectedOrder.totalRemainingQuantity === 0">{{ selectedOrder.totalRemainingQuantity }}</strong>
+    </div>
+  </div>
+}
+
+<!-- Create Slide-Over -->
+<app-slide-over [open]="slideOpen" title="New Delivery Order" (onClose)="slideOpen = false">
+  <div class="space-y-3">
+    <app-section-divider label="Header" />
+
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Order Number <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="form.orderNumber" placeholder="DO-xxx"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Line Operator <span class="text-[#D9534F]">*</span></label>
+        <select [(ngModel)]="form.lineOperatorId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+          <option [ngValue]="0">Select operator...</option>
+          @for (op of lineOperators; track op.id) {
+            <option [ngValue]="op.id">{{ op.code }} — {{ op.name }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Customer <span class="text-[#D9534F]">*</span></label>
+        <select [(ngModel)]="form.customerId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+          <option [ngValue]="0">Select customer...</option>
+          @for (c of customers; track c.id) {
+            <option [ngValue]="c.id">{{ c.taxCode }} — {{ c.name }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Order Date <span class="text-[#D9534F]">*</span></label>
+        <input type="date" [(ngModel)]="form.orderDate"
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Expiry Date <span class="text-[#D9534F]">*</span></label>
+        <input type="date" [(ngModel)]="form.orderExpiryDate"
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Outbound Vessel</label>
+        <input [(ngModel)]="form.outboundVessel" placeholder="e.g. MV SINAR BANDUNG"
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Voyage Number</label>
+        <input [(ngModel)]="form.voyageNumber" placeholder="e.g. V.2026/04N"
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Remarks</label>
+      <textarea [(ngModel)]="form.remarks" rows="2" placeholder="Optional notes..."
+                class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]"></textarea>
+    </div>
+
+    <app-section-divider label="Order Lines" />
+    <div class="space-y-3">
+      @for (line of form.lines; track $index; let i = $index) {
+        <div class="border border-[#E0E0E0] rounded p-3 bg-[#F9F9F9]">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[12px] font-semibold text-[#555]">#{{ i + 1 }}</span>
+            @if (form.lines.length > 1) {
+              <button (click)="removeLine(i)" class="p-1 text-[#D9534F] hover:bg-[#FDF2F2] rounded">
+                <i class="pi pi-trash text-[12px]"></i>
+              </button>
+            }
+          </div>
+          <div class="grid grid-cols-4 gap-2">
+            <div>
+              <label class="block text-[11px] font-medium text-[#555] mb-1">Type</label>
+              <select [(ngModel)]="line.containerType" class="w-full border border-[#CCC] rounded px-2 py-1.5 text-[13px] bg-white">
+                @for (t of containerTypes; track t) { <option [value]="t">{{ t }}</option> }
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-[#555] mb-1">Size</label>
+              <select [(ngModel)]="line.containerSize" class="w-full border border-[#CCC] rounded px-2 py-1.5 text-[13px] bg-white">
+                <option value="20ft">20ft</option>
+                <option value="40ft">40ft</option>
+                <option value="45ft">45ft</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-[#555] mb-1">ISO Code</label>
+              <input [(ngModel)]="line.isoCode" placeholder="e.g. 22G1"
+                     class="w-full border border-[#CCC] rounded px-2 py-1.5 text-[13px]">
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-[#555] mb-1">Qty</label>
+              <input type="number" min="1" [(ngModel)]="line.quantity"
+                     class="w-full border border-[#CCC] rounded px-2 py-1.5 text-[13px]">
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+    <button (click)="addLine()"
+            class="w-full border border-dashed border-[#0275D8] text-[#0275D8] text-[13px] py-2 rounded hover:bg-[#EFF8FF] flex items-center justify-center gap-1">
+      <i class="pi pi-plus text-[12px]"></i> Add Line
+    </button>
+
+    <div class="flex gap-2 pt-4 border-t border-[#E0E0E0] mt-4">
+      <button (click)="slideOpen = false"
+              class="flex-1 px-4 py-2 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
+      <button (click)="createOrder()" [disabled]="saving || !form.orderNumber || !form.lineOperatorId || !form.customerId || !form.orderExpiryDate"
+              class="flex-1 px-4 py-2 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
+        {{ saving ? 'Creating...' : 'Create Order' }}
+      </button>
+    </div>
+  </div>
+</app-slide-over>

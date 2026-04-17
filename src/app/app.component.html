@@ -1,0 +1,134 @@
+@if (isAuthRoute()) {
+  <p-toast position="top-right" />
+  <router-outlet />
+} @else {
+  <p-toast position="top-right" />
+  <div class="flex h-screen bg-[#F5F5F5] overflow-hidden">
+
+    <!-- Mobile backdrop -->
+    @if (mobileMenuOpen()) {
+      <div class="fixed inset-0 bg-black/30 z-40 lg:hidden" (click)="mobileMenuOpen.set(false)"></div>
+    }
+
+    <!-- Sidebar -->
+    <aside class="flex-col bg-[#1E2535] text-white h-screen transition-all duration-200 shrink-0
+                  hidden lg:flex"
+           [class.!fixed]="mobileMenuOpen()"
+           [class.!flex]="mobileMenuOpen()"
+           [class.!z-50]="mobileMenuOpen()"
+           [style.width.px]="collapsed() ? 52 : 220">
+
+      <!-- Logo -->
+      <div class="flex items-center gap-2 px-3 py-3.5 border-b border-white/10 min-h-[52px]">
+        <div class="w-7 h-7 bg-[#0275D8] rounded flex items-center justify-center shrink-0">
+          <i class="pi pi-warehouse text-[14px] text-white"></i>
+        </div>
+        @if (!collapsed()) {
+          <span class="text-[13px] font-semibold leading-tight whitespace-nowrap">
+            Depot<br/>Management
+          </span>
+        }
+      </div>
+
+      <!-- Nav -->
+      <nav class="flex-1 py-2 overflow-y-auto">
+        <!-- Operations section -->
+        @if (visibleNavItems().length > 0) {
+          @if (!collapsed()) {
+            <div class="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#546680]">Operations</div>
+          }
+          @for (item of visibleNavItems(); track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="bg-[#0275D8] !text-white"
+               [routerLinkActiveOptions]="{ exact: item.exact ?? false }"
+               class="flex items-center gap-3 px-3 py-2 text-[13px] transition-colors text-[#B0BAC9] hover:bg-white/10 hover:text-white"
+               [class.justify-center]="collapsed()">
+              <i [class]="item.icon + ' text-[14px] shrink-0'"></i>
+              @if (!collapsed()) {
+                <span class="whitespace-nowrap">{{ item.label }}</span>
+              }
+            </a>
+          }
+        }
+
+        @if (visibleRefItems().length > 0) {
+          <div class="mx-3 my-2 border-t border-white/10"></div>
+          @if (!collapsed()) {
+            <div class="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#546680]">Reference Data</div>
+          }
+          @for (item of visibleRefItems(); track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="bg-[#0275D8] !text-white"
+               class="flex items-center gap-3 px-3 py-2 text-[13px] transition-colors text-[#B0BAC9] hover:bg-white/10 hover:text-white"
+               [class.justify-center]="collapsed()">
+              <i [class]="item.icon + ' text-[14px] shrink-0'"></i>
+              @if (!collapsed()) {
+                <span class="whitespace-nowrap">{{ item.label }}</span>
+              }
+            </a>
+          }
+        }
+
+        @if (visibleAdminItems().length > 0) {
+          <div class="mx-3 my-2 border-t border-white/10"></div>
+          @if (!collapsed()) {
+            <div class="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#546680]">Administration</div>
+          }
+          @for (item of visibleAdminItems(); track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="bg-[#0275D8] !text-white"
+               class="flex items-center gap-3 px-3 py-2 text-[13px] transition-colors text-[#B0BAC9] hover:bg-white/10 hover:text-white"
+               [class.justify-center]="collapsed()">
+              <i [class]="item.icon + ' text-[14px] shrink-0'"></i>
+              @if (!collapsed()) {
+                <span class="whitespace-nowrap">{{ item.label }}</span>
+              }
+            </a>
+          }
+        }
+      </nav>
+
+      <!-- Collapse toggle -->
+      <button (click)="collapsed.set(!collapsed())"
+              class="hidden lg:flex items-center justify-center py-2.5 border-t border-white/10 text-[#B0BAC9] hover:text-white hover:bg-white/10 transition-colors">
+        <i class="pi text-[14px]" [class.pi-chevron-left]="!collapsed()" [class.pi-chevron-right]="collapsed()"></i>
+      </button>
+    </aside>
+
+    <!-- Main area -->
+    <div class="flex flex-col flex-1 overflow-hidden">
+
+      <!-- Header -->
+      <header class="h-[52px] bg-white border-b border-[#E0E0E0] flex items-center justify-between px-3 sm:px-5 shrink-0 z-10">
+        <div class="flex items-center">
+          <button (click)="mobileMenuOpen.set(!mobileMenuOpen())"
+                  class="lg:hidden p-1.5 rounded hover:bg-[#F5F5F5] text-[#666] mr-2">
+            <i class="pi pi-bars text-[16px]"></i>
+          </button>
+          <div class="hidden sm:block text-[13px] text-[#888]">
+            Depot Container Management System —
+            <span class="text-[#0275D8] font-medium">v1.0.0</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2 text-[13px] text-[#555]">
+            <div class="flex items-center justify-center w-7 h-7 bg-[#E8EDF2] rounded-full">
+              <i class="pi pi-user text-[12px] text-[#666]"></i>
+            </div>
+            <div class="hidden sm:block leading-tight">
+              <div class="text-[12px] font-medium text-[#333]">{{ authService.currentUser()?.fullName }}</div>
+              <div class="text-[11px] text-[#888]">{{ authService.roleName() }}</div>
+            </div>
+          </div>
+          <button (click)="logout()"
+                  class="flex items-center gap-1.5 px-3 py-1.5 text-[12px] border border-[#CCC] rounded text-[#666] hover:bg-[#F5F5F5] hover:text-[#333] transition-colors">
+            <i class="pi pi-sign-out text-[12px]"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <main class="flex-1 overflow-auto p-3 sm:p-5">
+        <router-outlet />
+      </main>
+    </div>
+  </div>
+}

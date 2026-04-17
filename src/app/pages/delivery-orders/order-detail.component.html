@@ -1,0 +1,230 @@
+<p-toast position="top-right" />
+
+@if (order) {
+  <!-- Breadcrumb & Header -->
+  <div class="mb-4">
+    <div class="text-[11px] text-[#888] mb-1">
+      <a routerLink="/delivery-orders" class="hover:underline text-[#888]">Home › Delivery Orders</a>
+      › {{ order.orderNumber }}
+    </div>
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a routerLink="/delivery-orders"
+           class="flex items-center justify-center w-8 h-8 rounded border border-[#E0E0E0] hover:bg-[#F5F5F5] text-[#666]">
+          <i class="pi pi-arrow-left text-[12px]"></i>
+        </a>
+        <h1 class="text-[20px] font-semibold text-[#333]">{{ order.orderNumber }}</h1>
+        <app-status-badge [status]="$any(getOrderBadgeStatus())" [label]="getOrderStatus()" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Info + Summary -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <!-- Order Info -->
+    <div class="bg-white border border-[#E0E0E0] rounded p-4">
+      <div class="text-[13px] font-semibold text-[#333] mb-3 pb-2 border-b border-[#F0F0F0]">Order Info</div>
+      <div class="grid grid-cols-2 gap-y-3 text-[12px]">
+        <div><span class="text-[#888] block text-[11px]">Line Operator</span>{{ order.lineOperatorCode }} — {{ order.lineOperatorName }}</div>
+        <div><span class="text-[#888] block text-[11px]">Customer</span>{{ order.customerName }}</div>
+        <div><span class="text-[#888] block text-[11px]">Tax Code</span>{{ order.customerTaxCode }}</div>
+        <div><span class="text-[#888] block text-[11px]">Vessel</span>{{ order.outboundVessel || '—' }}</div>
+        <div>
+          <span class="text-[#888] block text-[11px]">Expiry Date</span>
+          <span [class.text-[#D9534F]]="order.isExpired">{{ order.orderExpiryDate }}</span>
+        </div>
+        @if (order.voyageNumber) {
+          <div><span class="text-[#888] block text-[11px]">Voyage</span>{{ order.voyageNumber }}</div>
+        }
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="bg-white border border-[#E0E0E0] rounded p-4">
+      <div class="text-[13px] font-semibold text-[#333] mb-3 pb-2 border-b border-[#F0F0F0]">Summary</div>
+      <div class="grid grid-cols-3 gap-4 text-center mb-3">
+        <div>
+          <div class="text-[22px] font-semibold text-[#333]">{{ order.totalRequestedQuantity }}</div>
+          <div class="text-[11px] text-[#888]">Requested</div>
+        </div>
+        <div>
+          <div class="text-[22px] font-semibold text-[#3C763D]">{{ order.totalReleasedQuantity }}</div>
+          <div class="text-[11px] text-[#888]">Released</div>
+        </div>
+        <div>
+          <div class="text-[22px] font-semibold"
+               [class.text-[#D9534F]]="order.totalRemainingQuantity > 0"
+               [class.text-[#999]]="order.totalRemainingQuantity === 0">{{ order.totalRemainingQuantity }}</div>
+          <div class="text-[11px] text-[#888]">Remaining</div>
+        </div>
+      </div>
+      <!-- Progress bar -->
+      <div>
+        <div class="flex justify-between text-[11px] text-[#888] mb-1">
+          <span>Progress</span>
+          <span>{{ progressPercent.toFixed(0) }}%</span>
+        </div>
+        <div class="h-2 bg-[#F0F0F0] rounded-full overflow-hidden">
+          <div class="h-full rounded-full transition-all duration-500"
+               [style.width.%]="progressPercent"
+               [class.bg-[#3C763D]]="order.isFulfilled"
+               [class.bg-[#0275D8]]="!order.isFulfilled"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Lines -->
+  <div class="bg-white border border-[#E0E0E0] rounded p-4 mb-4">
+    <div class="text-[13px] font-semibold text-[#333] mb-3 pb-2 border-b border-[#F0F0F0]">Order Lines</div>
+    <table class="w-full text-[12px]">
+      <thead>
+        <tr class="bg-[#F5F5F5] border-b border-[#E0E0E0]">
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Container Type</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Qty</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Released</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Remaining</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Depot Stock</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Can Fulfill</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (l of order.lines; track l.id) {
+          <tr class="border-b border-[#F0F0F0]" [class.opacity-50]="l.remainingQuantity === 0">
+            <td class="px-3 py-2" [class.line-through]="l.remainingQuantity === 0">{{ l.containerType }}</td>
+            <td class="px-3 py-2 font-medium">{{ l.quantity }}</td>
+            <td class="px-3 py-2 text-[#3C763D]">{{ l.releasedQuantity }}</td>
+            <td class="px-3 py-2 font-medium"
+                [class.text-[#D9534F]]="l.remainingQuantity > 0"
+                [class.text-[#999]]="l.remainingQuantity === 0">{{ l.remainingQuantity }}</td>
+            <td class="px-3 py-2">{{ l.availableInDepotQuantity }}</td>
+            <td class="px-3 py-2">
+              @if (l.canBeFulfilledFromDepotStock) {
+                <i class="pi pi-check-circle text-[#3C763D]"></i>
+              } @else {
+                <i class="pi pi-times-circle text-[#D9534F]"></i>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Eligible Containers -->
+  <div class="bg-white border border-[#E0E0E0] rounded p-4">
+    <div class="flex items-center justify-between mb-3 pb-2 border-b border-[#F0F0F0]">
+      <span class="text-[13px] font-semibold text-[#333]">Eligible Containers</span>
+      <span class="text-[12px] text-[#888]">{{ eligibleContainers.length }} available</span>
+    </div>
+    <table class="w-full text-[12px]">
+      <thead>
+        <tr class="bg-[#F5F5F5] border-b border-[#E0E0E0]">
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Number</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Type</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Block</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Position</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Grade</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Condition</th>
+          <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Inbound At</th>
+          <th class="w-20"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (eligibleContainers.length === 0) {
+          <tr><td colspan="8" class="text-center py-8 text-[13px] text-[#888]">No eligible containers</td></tr>
+        }
+        @for (c of eligibleContainers; track c.containerId) {
+          <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
+            <td class="px-3 py-2">
+              <a [routerLink]="['/containers', c.containerNumber]" class="font-mono font-medium text-[#0275D8] hover:underline text-[11px]">
+                {{ c.containerNumber }}
+              </a>
+            </td>
+            <td class="px-3 py-2">{{ c.containerType }}</td>
+            <td class="px-3 py-2 font-medium">{{ c.yardBlockCode }}</td>
+            <td class="px-3 py-2">{{ c.bay ? c.bay + '-' + c.row + '-' + c.tier : '—' }}</td>
+            <td class="px-3 py-2 font-medium text-[#0275D8]">{{ c.classification }}</td>
+            <td class="px-3 py-2"><app-status-badge [status]="$any(c.condition)" /></td>
+            <td class="px-3 py-2 text-[#666]">{{ c.inboundAt | date:'mediumDate' }}</td>
+            <td class="px-3 py-2">
+              @if (authService.canGateInOut() && !order.isExpired && order.hasRemainingQuantity) {
+                <button (click)="openOutbound(c.containerNumber)"
+                        class="px-2.5 py-1 text-[11px] bg-[#0275D8] hover:bg-[#025AA5] text-white rounded">
+                  Release
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Release History -->
+  @if (releaseHistory.length > 0) {
+    <div class="bg-white border border-[#E0E0E0] rounded p-4 mt-4">
+      <div class="flex items-center justify-between mb-3 pb-2 border-b border-[#F0F0F0]">
+        <span class="text-[13px] font-semibold text-[#333]">Release History</span>
+        <span class="text-[12px] text-[#888]">{{ releaseHistory.length }} released</span>
+      </div>
+      <table class="w-full text-[12px]">
+        <thead>
+          <tr class="bg-[#F5F5F5] border-b border-[#E0E0E0]">
+            <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Date</th>
+            <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Container #</th>
+            <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Block</th>
+            <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Vehicle</th>
+            <th class="text-left px-3 py-2 text-[11px] font-semibold text-[#555]">Inbound At</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (v of releaseHistory; track v.id) {
+            <tr class="border-b border-[#F0F0F0]">
+              <td class="px-3 py-2 text-[#666]">{{ v.outboundAt | date:'medium' }}</td>
+              <td class="px-3 py-2">
+                <a [routerLink]="['/containers', v.containerNumber]" class="font-mono font-medium text-[#0275D8] hover:underline text-[11px]">
+                  {{ v.containerNumber }}
+                </a>
+              </td>
+              <td class="px-3 py-2 font-medium">{{ v.yardBlockCode }}</td>
+              <td class="px-3 py-2">{{ v.outboundVehicle || '—' }}</td>
+              <td class="px-3 py-2 text-[#666]">{{ v.inboundAt | date:'mediumDate' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Outbound Slide-Over -->
+  <app-slide-over [open]="outboundSlideOpen" title="Release Container" (onClose)="outboundSlideOpen = false">
+    <div class="space-y-3">
+      <div>
+        <span class="text-[#888] text-[12px]">Container</span>
+        <div class="font-mono font-medium text-[#0275D8]">{{ outboundContainerNumber }}</div>
+      </div>
+      <div>
+        <span class="text-[#888] text-[12px]">Order</span>
+        <div class="font-medium">{{ order.orderNumber }}</div>
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Vehicle <span class="text-[#D9534F]">*</span></label>
+        <input [(ngModel)]="outboundVehicle" placeholder="e.g. TRUCK-OUT-001"
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+      @if (authService.canGateInOut()) {
+        <div class="flex gap-2 pt-4 border-t border-[#E0E0E0] mt-4">
+        <button (click)="outboundSlideOpen = false"
+                class="flex-1 px-4 py-2 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
+          <button (click)="doOutbound()" [disabled]="outbounding || !outboundVehicle"
+                  class="flex-1 px-4 py-2 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
+            {{ outbounding ? 'Releasing...' : 'Release' }}
+          </button>
+        </div>
+      }
+    </div>
+  </app-slide-over>
+} @else {
+  <div class="text-center py-20 text-[13px] text-[#888]">Loading...</div>
+}

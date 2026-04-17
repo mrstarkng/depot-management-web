@@ -1,0 +1,148 @@
+<div class="mb-4">
+  <div class="text-[11px] text-[#888] mb-1">Home › Yard Map</div>
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <h1 class="text-[20px] font-semibold text-[#333]">Yard Map</h1>
+    <div class="flex items-center gap-2 text-[12px]">
+      <span class="w-2.5 h-2.5 rounded-full" [class.bg-[#3C763D]]="connected()" [class.bg-[#D9534F]]="!connected()"></span>
+      <span class="text-[#666]">Live {{ connected() ? 'Connected' : 'Disconnected' }}</span>
+      @if (readOnlyMode()) {
+        <span class="px-2 py-0.5 rounded bg-[#F5F5F5] text-[#666] text-[11px]">Read-only</span>
+      }
+    </div>
+  </div>
+</div>
+
+<div class="bg-white border border-[#E0E0E0] rounded p-3 mb-4 flex flex-wrap gap-3 items-center">
+  <input [(ngModel)]="searchContainer" placeholder="Search container#..."
+         class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] w-[220px]">
+
+  <select [ngModel]="selectedBlockCode()" (ngModelChange)="selectedBlockCode.set($event)"
+          class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white min-w-[180px]">
+    <option value="">All blocks</option>
+    @for (b of blocks(); track b.blockCode) {
+      <option [value]="b.blockCode">{{ b.blockCode }} ({{ b.occupancyPercent }}%)</option>
+    }
+  </select>
+
+  <div class="flex items-center gap-1.5">
+    <button (click)="toggleHeatmap('off')"
+            class="px-3 py-1.5 text-[12px] border rounded"
+            [class.bg-[#0275D8]]="heatmapMode() === 'off'"
+            [class.text-white]="heatmapMode() === 'off'"
+            [class.border-[#0275D8]]="heatmapMode() === 'off'"
+            [class.border-[#CCC]]="heatmapMode() !== 'off'">
+      Off
+    </button>
+    <button (click)="toggleHeatmap('occupancy')"
+            class="px-3 py-1.5 text-[12px] border rounded"
+            [class.bg-[#0275D8]]="heatmapMode() === 'occupancy'"
+            [class.text-white]="heatmapMode() === 'occupancy'"
+            [class.border-[#0275D8]]="heatmapMode() === 'occupancy'"
+            [class.border-[#CCC]]="heatmapMode() !== 'occupancy'">
+      Occupancy
+    </button>
+    <button (click)="toggleHeatmap('dwell')"
+            class="px-3 py-1.5 text-[12px] border rounded"
+            [class.bg-[#0275D8]]="heatmapMode() === 'dwell'"
+            [class.text-white]="heatmapMode() === 'dwell'"
+            [class.border-[#0275D8]]="heatmapMode() === 'dwell'"
+            [class.border-[#CCC]]="heatmapMode() !== 'dwell'">
+      Dwell
+    </button>
+  </div>
+
+  <button (click)="clearFilters()" class="text-[12px] text-[#0275D8] hover:underline">Reset</button>
+</div>
+
+@if (error()) {
+  <div class="mb-4 p-3 bg-[#FDF2F2] border border-[#F5C6CB] rounded text-[12px] text-[#D9534F]">
+    {{ error() }}
+  </div>
+}
+
+@if (loading()) {
+  <div class="bg-white border border-[#E0E0E0] rounded p-8 text-center text-[13px] text-[#888]">Loading yard map...</div>
+} @else {
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="bg-white border border-[#E0E0E0] rounded">
+      <div class="px-4 py-3 border-b border-[#E0E0E0] flex items-center justify-between">
+        <span class="text-[13px] font-semibold text-[#333]">Block Overview</span>
+        <span class="text-[12px] text-[#888]">{{ blocks().length }} physical blocks</span>
+      </div>
+      <div class="p-4 space-y-2">
+        @for (b of blocks(); track b.blockCode) {
+          <button (click)="selectBlock(b.blockCode)"
+                  class="w-full text-left border rounded px-3 py-2 hover:bg-[#F9F9F9]"
+                  [class.border-[#0275D8]]="selectedBlockCode() === b.blockCode"
+                  [class.bg-[#EFF8FF]]="selectedBlockCode() === b.blockCode">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-[13px] text-[#333]">{{ b.blockCode }}</span>
+              <span class="text-[12px] text-[#666]">{{ b.occupancyPercent }}%</span>
+            </div>
+            <div class="text-[11px] text-[#888] mt-1">
+              {{ b.occupiedSlots }} occupied
+              @if (b.maxCapacity) { / {{ b.maxCapacity }} capacity }
+            </div>
+          </button>
+        } @empty {
+          <div class="text-[12px] text-[#888]">No blocks available</div>
+        }
+      </div>
+    </div>
+
+    <div class="bg-white border border-[#E0E0E0] rounded">
+      <div class="px-4 py-3 border-b border-[#E0E0E0] flex items-center justify-between">
+        <span class="text-[13px] font-semibold text-[#333]">Map Data (Scaffold)</span>
+        <span class="text-[12px] text-[#888]">{{ filteredSlots().length }} slots</span>
+      </div>
+      <div class="p-4">
+        <div class="text-[12px] text-[#666] mb-3">
+          Canvas rendering (Konva) is next phase. Current scaffold validates backend contract, focus loading, and realtime connectivity.
+        </div>
+
+        @if (selectedBlockCode()) {
+          <div class="mb-3 p-2.5 bg-[#F5F5F5] border border-[#E0E0E0] rounded text-[12px]">
+            Focus block: <span class="font-medium">{{ selectedBlockCode() }}</span>
+          </div>
+        }
+
+        @if (heatmapMode() !== 'off') {
+          <div class="mb-3 p-2.5 bg-[#FCF8E3] border border-[#FAEBCC] rounded text-[12px] text-[#8A6D3B]">
+            Heatmap {{ heatmapMode() }} loaded: {{ heatmapCells().length }} cells
+          </div>
+        }
+
+        @if (lastEvent()) {
+          <div class="mb-3 p-2.5 bg-[#D9EDF7] border border-[#BCE8F1] rounded text-[12px] text-[#31708F]">
+            Last event: {{ lastEvent()!.eventType }} — {{ lastEvent()!.containerNumber }} &#64; {{ lastEvent()!.blockCode }}
+          </div>
+        }
+
+        <div class="max-h-[320px] overflow-auto border border-[#E0E0E0] rounded">
+          <table class="w-full text-[12px]">
+            <thead class="bg-[#F9F9F9] border-b border-[#E0E0E0]">
+              <tr>
+                <th class="text-left px-3 py-2">Container</th>
+                <th class="text-left px-3 py-2">Block</th>
+                <th class="text-left px-3 py-2">Position</th>
+                <th class="text-left px-3 py-2">Tier</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (s of filteredSlots(); track s.visitId) {
+                <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
+                  <td class="px-3 py-2 font-mono text-[11px] text-[#0275D8]">{{ s.containerNumber }}</td>
+                  <td class="px-3 py-2">{{ s.blockCode }}</td>
+                  <td class="px-3 py-2">{{ s.bay }}-{{ s.row }}</td>
+                  <td class="px-3 py-2">{{ s.tier }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="4" class="px-3 py-4 text-center text-[#888]">No slots match current filters</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+}

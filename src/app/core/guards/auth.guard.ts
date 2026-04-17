@@ -1,11 +1,26 @@
-import { CanActivateFn } from '@angular/router';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
+import { AuthService } from '../services/auth.service';
 
-export const authGuard: CanActivateFn = () => {
-  // Placeholder: implement auth check when authentication is added
-  return true;
+export const authGuard: CanActivateFn = (_route, state) => {
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.isAuthenticated()) {
+    return true;
+  }
+
+  return router.createUrlTree(['/login'], {
+    queryParams: state.url && state.url !== '/' ? { redirectTo: state.url } : undefined,
+  });
 };
 
 export const guestGuard: CanActivateFn = () => {
-  // Placeholder: redirect to home if already authenticated
+  const authService = inject(AuthService);
+  const router = inject(Router);
+
+  if (authService.isAuthenticated()) {
+    return router.createUrlTree(['/']);
+  }
   return true;
 };

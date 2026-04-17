@@ -1,0 +1,266 @@
+<p-toast position="top-right" />
+
+<!-- Page Header -->
+<div class="flex items-center justify-between mb-4">
+  <div>
+    <div class="text-[11px] text-[#888] mb-1">Home › Administration › User Management</div>
+    <h1 class="text-[20px] font-semibold text-[#333]">User Management</h1>
+  </div>
+  <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1.5 px-3 py-1.5 bg-[#FCF8E3] border border-[#F0AD4E]/40 rounded text-[12px] text-[#8A6D3B]">
+      <i class="pi pi-shield text-[12px]"></i>
+      <span>Manager Access Only</span>
+    </div>
+    <button (click)="openCreate()"
+            class="bg-[#0275D8] text-white px-4 py-2 rounded text-[13px] font-medium hover:bg-[#025AA5]">
+      <i class="pi pi-plus mr-1.5"></i>New User
+    </button>
+  </div>
+</div>
+
+<!-- Access notice -->
+<div class="flex items-start gap-3 px-4 py-3 bg-[#EFF8FF] border border-[#0275D8]/20 rounded mb-4 text-[12px]">
+  <i class="pi pi-lock text-[14px] text-[#0275D8] mt-0.5 shrink-0"></i>
+  <div class="text-[#333]">
+    <span class="font-semibold text-[#0275D8]">Manager role required.</span>
+    Only depot managers can create, edit, or deactivate user accounts. Role assignments control which screens and actions each user can access across the system.
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="bg-white border border-[#E0E0E0] rounded p-3 mb-4 flex flex-wrap items-center gap-3">
+  <input [(ngModel)]="search" (ngModelChange)="page = 1" placeholder="Search username/name/email..."
+         class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] w-[220px]">
+  <select [(ngModel)]="roleFilter" (ngModelChange)="page = 1"
+          class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+    <option value="All">All Roles</option>
+    @for (r of roles; track r) {
+      <option [value]="r">{{ roleLabel(r) }}</option>
+    }
+  </select>
+  <select [(ngModel)]="statusFilter" (ngModelChange)="page = 1"
+          class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+    <option value="All">All Status</option>
+    <option value="Active">Active</option>
+    <option value="Inactive">Inactive</option>
+  </select>
+  <button (click)="resetFilters()" class="text-[12px] text-[#0275D8] hover:underline">Reset</button>
+</div>
+
+<!-- Table -->
+<div class="bg-white border border-[#E0E0E0] rounded overflow-hidden">
+  <table class="w-full text-[13px]">
+    <thead>
+      <tr class="bg-[#F5F5F5] border-b border-[#E0E0E0]">
+        <th (click)="handleSort('userName')" class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] cursor-pointer select-none hover:text-[#333]">
+          Username
+          <i class="pi text-[10px] ml-0.5"
+             [class.pi-chevron-up]="sortDir === 'asc' && sortKey === 'userName'"
+             [class.pi-chevron-down]="sortDir === 'desc' && sortKey === 'userName'"
+             [class.text-[#0275D8]]="sortKey === 'userName'"
+             [class.text-[#CCC]]="sortKey !== 'userName'"></i>
+        </th>
+        <th (click)="handleSort('fullName')" class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] cursor-pointer select-none hover:text-[#333]">
+          Full Name
+          <i class="pi text-[10px] ml-0.5"
+             [class.pi-chevron-up]="sortDir === 'asc' && sortKey === 'fullName'"
+             [class.pi-chevron-down]="sortDir === 'desc' && sortKey === 'fullName'"
+             [class.text-[#0275D8]]="sortKey === 'fullName'"
+             [class.text-[#CCC]]="sortKey !== 'fullName'"></i>
+        </th>
+        <th (click)="handleSort('role')" class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] cursor-pointer select-none hover:text-[#333]">
+          Role
+        </th>
+        <th (click)="handleSort('lastLoginAt')" class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] cursor-pointer select-none hover:text-[#333]">
+          Last Login
+        </th>
+        <th class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555]">Status</th>
+        <th class="text-right px-3 py-2.5 text-[12px] font-semibold text-[#555] w-10"></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (u of paginated; track u.id) {
+        <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
+          <td class="px-3 py-2.5 font-mono font-medium text-[12px] text-[#0275D8]">{{ u.userName }}</td>
+          <td class="px-3 py-2.5 font-medium">{{ u.fullName }}</td>
+          <td class="px-3 py-2.5">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium"
+                  [class]="roleBadge(u.role)">
+              {{ roleLabel(u.role) }}
+            </span>
+          </td>
+          <td class="px-3 py-2.5 text-[#666]">{{ formatLastLogin(u.lastLoginAt) }}</td>
+          <td class="px-3 py-2.5">
+            <app-status-badge [status]="u.isActive ? 'Active' : 'Inactive'" />
+          </td>
+          <td class="px-3 py-2.5 text-right relative">
+            <button (click)="toggleMenu(u.id, $event)" class="w-7 h-7 rounded hover:bg-[#F0F0F0] text-[#888]">
+              <i class="pi pi-ellipsis-v text-[12px]"></i>
+            </button>
+            @if (openMenuId === u.id) {
+              <div class="absolute right-3 top-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg z-20 py-1 w-[160px]">
+                <button (click)="openEdit(u)" class="w-full text-left px-3 py-1.5 text-[12px] hover:bg-[#F5F5F5]">
+                  <i class="pi pi-pencil mr-2 text-[11px]"></i>Edit
+                </button>
+                @if (!isSelf(u)) {
+                  <button (click)="openChangeRole(u)" class="w-full text-left px-3 py-1.5 text-[12px] hover:bg-[#F5F5F5]">
+                    <i class="pi pi-id-card mr-2 text-[11px]"></i>Change Role
+                  </button>
+                }
+                <button (click)="openResetPassword(u)" class="w-full text-left px-3 py-1.5 text-[12px] hover:bg-[#F5F5F5]">
+                  <i class="pi pi-key mr-2 text-[11px]"></i>Reset Password
+                </button>
+                @if (!isSelf(u)) {
+                  @if (u.isActive) {
+                    <button (click)="deactivate(u)" class="w-full text-left px-3 py-1.5 text-[12px] text-[#D9534F] hover:bg-[#F5F5F5]">
+                      <i class="pi pi-ban mr-2 text-[11px]"></i>Deactivate
+                    </button>
+                  } @else {
+                    <button (click)="activate(u)" class="w-full text-left px-3 py-1.5 text-[12px] text-[#3C763D] hover:bg-[#F5F5F5]">
+                      <i class="pi pi-check-circle mr-2 text-[11px]"></i>Activate
+                    </button>
+                  }
+                }
+              </div>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr><td colspan="6" class="text-center py-8 text-[#888] text-[13px]">
+          {{ loading ? 'Loading...' : 'No users found' }}
+        </td></tr>
+      }
+    </tbody>
+  </table>
+  <app-pagination [currentPage]="page" [totalItems]="filtered.length" [itemsPerPage]="perPage"
+                  (pageChange)="page = $event" (itemsPerPageChange)="perPage = $event; page = 1" />
+</div>
+
+<!-- Create/Edit Slide-Over -->
+<app-slide-over [open]="slideOpen" [title]="editMode ? 'Edit User' : 'New User'" (onClose)="slideOpen = false">
+  <div class="space-y-3">
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Username <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="form.userName" [disabled]="editMode" placeholder="e.g. jdoe"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] disabled:bg-[#F5F5F5]">
+      @if (!editMode) {
+        <div class="text-[10px] text-[#888] mt-0.5">Cannot be changed after creation</div>
+      }
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Full Name <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="form.fullName" placeholder="e.g. Jane Doe"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Email <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="form.email" type="email" placeholder="jane@example.com"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+    @if (!editMode) {
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Role <span class="text-[#D9534F]">*</span></label>
+        <select [(ngModel)]="form.role"
+                class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+          @for (r of roles; track r) {
+            <option [value]="r">{{ roleLabel(r) }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Password <span class="text-[#D9534F]">*</span></label>
+        <input [(ngModel)]="form.password" type="password" placeholder="Min 6 characters"
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Confirm Password <span class="text-[#D9534F]">*</span></label>
+        <input [(ngModel)]="form.confirmPassword" type="password" placeholder="Repeat password"
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+        @if (form.confirmPassword && form.password !== form.confirmPassword) {
+          <div class="text-[11px] text-[#D9534F] mt-0.5">Passwords do not match</div>
+        }
+      </div>
+    }
+    @if (editMode) {
+      <div class="text-[11px] text-[#888] pt-1">
+        To change role, use <span class="font-medium text-[#555]">Change Role</span> from the action menu.
+      </div>
+    }
+    <div class="flex gap-2 pt-4 border-t border-[#E0E0E0] mt-4">
+      <button (click)="slideOpen = false"
+              class="flex-1 px-4 py-2 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
+      <button (click)="save()" [disabled]="saving || !canSave()"
+              class="flex-1 px-4 py-2 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
+        {{ saving ? 'Saving...' : (editMode ? 'Update' : 'Create') }}
+      </button>
+    </div>
+  </div>
+</app-slide-over>
+
+<!-- Change Role Modal -->
+@if (roleModalOpen && roleModalUser) {
+  <div class="fixed inset-0 z-[60] flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/30" (click)="roleModalOpen = false"></div>
+    <div class="relative bg-white rounded shadow-xl w-[calc(100vw-2rem)] sm:w-[420px] p-5">
+      <div class="text-[15px] font-semibold text-[#333] mb-1">Change Role</div>
+      <div class="text-[12px] text-[#666] mb-4">
+        User: <span class="font-mono text-[#0275D8]">{{ roleModalUser.userName }}</span>
+      </div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">New Role</label>
+      <select [(ngModel)]="roleModalSelection"
+              class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+        @for (r of roles; track r) {
+          <option [value]="r">{{ roleLabel(r) }}</option>
+        }
+      </select>
+      <div class="flex justify-end gap-2 mt-5">
+        <button (click)="roleModalOpen = false"
+                class="px-4 py-1.5 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
+        <button (click)="saveRole()" [disabled]="roleModalSaving"
+                class="px-4 py-1.5 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
+          {{ roleModalSaving ? 'Saving...' : 'Save' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Reset Password Modal -->
+@if (resetPwdOpen && resetPwdUser) {
+  <div class="fixed inset-0 z-[60] flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/30" (click)="resetPwdOpen = false"></div>
+    <div class="relative bg-white rounded shadow-xl w-[calc(100vw-2rem)] sm:w-[420px] p-5">
+      <div class="text-[15px] font-semibold text-[#333] mb-1">Reset Password</div>
+      <div class="text-[12px] text-[#666] mb-4">
+        User: <span class="font-mono text-[#0275D8]">{{ resetPwdUser.userName }}</span>. Active sessions will be revoked.
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">New Password</label>
+          <input [(ngModel)]="resetPwdForm.newPassword" type="password" placeholder="Min 6 characters"
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+        </div>
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Confirm Password</label>
+          <input [(ngModel)]="resetPwdForm.confirmPassword" type="password" placeholder="Repeat password"
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+          @if (resetPwdForm.confirmPassword && resetPwdForm.newPassword !== resetPwdForm.confirmPassword) {
+            <div class="text-[11px] text-[#D9534F] mt-0.5">Passwords do not match</div>
+          }
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-5">
+        <button (click)="resetPwdOpen = false"
+                class="px-4 py-1.5 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
+        <button (click)="saveResetPassword()" [disabled]="resetPwdSaving || !canResetPassword()"
+                class="px-4 py-1.5 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
+          {{ resetPwdSaving ? 'Resetting...' : 'Reset' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Deactivate Confirm -->
+<app-confirm-dialog [open]="confirmOpen" [title]="confirmTitle" [message]="confirmMessage" variant="warning"
+                    (onConfirm)="onConfirm()" (onCancel)="onCancelConfirm()" />
