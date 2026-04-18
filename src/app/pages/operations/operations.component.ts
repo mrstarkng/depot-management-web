@@ -1,6 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import {
+  FormsModule,
+  ReactiveFormsModule,
+  FormControl,
+  FormGroup,
+  Validators,
+  ValidatorFn,
+  AbstractControl,
+  ValidationErrors,
+} from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
@@ -13,10 +22,77 @@ import {
   DeliveryOrder, ContainerGrade, ContainerConditionStatus
 } from '../../core/models/depot.models';
 
+// ── Validator factories (exported for unit tests) ────────────────────────────
+/**
+ * Bay parity rule (BR-CV-02):
+ * - 20ft container → bay must be odd (1, 3, 5, …).
+ * - 40ft or 45ft container → bay must be even (2, 4, 6, …).
+ * Size is read lazily so the validator reacts to the currently selected container.
+ */
+export function bayParityValidator(sizeGetter: () => string | undefined | null): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const rawBay = control.value;
+    const size = (sizeGetter() ?? '').toString();
+    if (rawBay === null || rawBay === undefined || rawBay === '' || !size) return null;
+    const bay = Number(rawBay);
+    if (!Number.isFinite(bay) || bay < 1) return null;
+    if (size === '20' && bay % 2 === 0) {
+      return { bayParity: { size, expected: 'odd', actual: bay } };
+    }
+    if ((size === '40' || size === '45') && bay % 2 !== 0) {
+      return { bayParity: { size, expected: 'even', actual: bay } };
+    }
+    return null;
+  };
+}
+
+/**
+ * Dynamic upper-bound validator. The limit is read via getter so it tracks the
+ * currently selected block dimensions without needing to rebuild validators.
+ */
+export function maxFromGetter(maxGetter: () => number | null | undefined): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const max = maxGetter();
+    if (max == null) return null;
+    const v = control.value;
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    return n > max ? { maxBound: { max, actual: n } } : null;
+  };
+}
+
+type PositionGroup = FormGroup<{
+  bay: FormControl<number | null>;
+  row: FormControl<number | null>;
+  tier: FormControl<number | null>;
+}>;
+
+function buildPositionGroup(
+  sizeGetter: () => string | undefined | null,
+  blockGetter: () => YardBlock | undefined,
+): PositionGroup {
+  return new FormGroup({
+    bay: new FormControl<number | null>(null, [
+      Validators.min(1),
+      maxFromGetter(() => blockGetter()?.bayCount ?? null),
+      bayParityValidator(sizeGetter),
+    ]),
+    row: new FormControl<number | null>(null, [
+      Validators.min(1),
+      maxFromGetter(() => blockGetter()?.rowCount ?? null),
+    ]),
+    tier: new FormControl<number | null>(null, [
+      Validators.min(1),
+      maxFromGetter(() => blockGetter()?.tierCount ?? null),
+    ]),
+  });
+}
+
 @Component({
   selector: 'depot-operations',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, ToastModule, StatusBadgeComponent, PaginationComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule, ToastModule, StatusBadgeComponent, PaginationComponent],
   providers: [MessageService],
   templateUrl: './operations.component.html',
 })
@@ -30,15 +106,13 @@ export class OperationsComponent implements OnInit {
   deliveryOrders: DeliveryOrder[] = [];
   inDepotVisits: ContainerVisit[] = [];
 
-  // Inbound form
+  // Inbound form (non-position fields use template-driven ngModel;
+  // bay/row/tier moved to `inboundPos` FormGroup for validation).
   inForm = {
     containerSearch: '',
     selectedContainerNumber: '',
     lineOperatorId: 0,
     yardBlockId: 0,
-    bay: null as number | null,
-    row: null as number | null,
-    tier: null as number | null,
     classification: 'A' as ContainerGrade,
     condition: 'Normal' as ContainerConditionStatus,
     inboundVehicle: '',
@@ -47,6 +121,10 @@ export class OperationsComponent implements OnInit {
   inboundSaving = false;
   inboundError = '';
   recentInbound: ContainerVisit[] = [];
+  readonly inboundPos: PositionGroup = buildPositionGroup(
+    () => this.containers.find(c => c.containerNumber === this.inForm.selectedContainerNumber)?.containerSize,
+    () => this.selectedInboundBlock,
+  );
 
   // Outbound form
   outForm = {
@@ -75,30 +153,32 @@ export class OperationsComponent implements OnInit {
   // Relocate (slide-over from In Depot)
   relocateForm = {
     yardBlockId: 0,
-    bay: null as number | null,
-    row: null as number | null,
-    tier: null as number | null,
     classification: 'A' as ContainerGrade,
     condition: 'Normal' as ContainerConditionStatus,
     reason: '',
   };
   relocateSaving = false;
   showRelocate = false;
+  readonly relocatePos: PositionGroup = buildPositionGroup(
+    () => this.containers.find(c => c.containerNumber === this.selectedVisit?.containerNumber)?.containerSize,
+    () => this.selectedRelocateBlock,
+  );
 
   // Relocate Tab (4th tab)
   relTabForm = {
     containerSearch: '',
     selectedContainerNumber: '',
     yardBlockId: 0,
-    bay: null as number | null,
-    row: null as number | null,
-    tier: null as number | null,
     remarks: '',
   };
   relTabSaving = false;
   relTabError = '';
   recentRelocations: ContainerVisit[] = [];
   selectedRelTabContainer: ContainerOverview | null = null;
+  readonly relTabPos: PositionGroup = buildPositionGroup(
+    () => this.selectedRelTabContainer?.containerSize,
+    () => this.selectedRelTabBlock,
+  );
 
   constructor(
     private depotService: DepotService,
@@ -179,6 +259,8 @@ export class OperationsComponent implements OnInit {
   selectInboundContainer(c: ContainerOverview) {
     this.inForm.selectedContainerNumber = c.containerNumber;
     this.inForm.containerSearch = c.containerNumber;
+    // Container size drives bay-parity; refresh validators.
+    this.inboundPos.controls.bay.updateValueAndValidity();
   }
 
   selectOutboundContainer(c: ContainerOverview) {
@@ -197,18 +279,36 @@ export class OperationsComponent implements OnInit {
     return this.yardBlocks.find(b => b.id === this.inForm.yardBlockId);
   }
 
+  onInboundBlockChange(): void {
+    this.inboundPos.updateValueAndValidity({ emitEvent: false });
+    this.inboundPos.controls.bay.updateValueAndValidity();
+    this.inboundPos.controls.row.updateValueAndValidity();
+    this.inboundPos.controls.tier.updateValueAndValidity();
+  }
+
   // ── Inbound ──
+  get inboundFormInvalid(): boolean {
+    if (!this.inForm.selectedContainerNumber || !this.inForm.lineOperatorId || !this.inForm.yardBlockId || !this.inForm.inboundVehicle) {
+      return true;
+    }
+    if (this.selectedInboundBlock?.blockType === 'Physical' && this.inboundPos.invalid) {
+      return true;
+    }
+    return false;
+  }
+
   submitInbound() {
     if (!this.authService.canGateInOut()) return;
-    if (!this.inForm.selectedContainerNumber || !this.inForm.lineOperatorId || !this.inForm.yardBlockId) return;
+    if (this.inboundFormInvalid) return;
     this.inboundSaving = true;
+    const pos = this.inboundPos.value;
     const req: InboundContainerRequest = {
       containerNumber: this.inForm.selectedContainerNumber,
       lineOperatorId: this.inForm.lineOperatorId,
       yardBlockId: this.inForm.yardBlockId,
-      bay: this.inForm.bay ?? undefined,
-      row: this.inForm.row ?? undefined,
-      tier: this.inForm.tier ?? undefined,
+      bay: pos.bay ?? undefined,
+      row: pos.row ?? undefined,
+      tier: pos.tier ?? undefined,
       classification: this.inForm.classification,
       condition: this.inForm.condition,
       inboundVehicle: this.inForm.inboundVehicle,
@@ -238,8 +338,9 @@ export class OperationsComponent implements OnInit {
   resetInboundForm() {
     this.inForm = {
       containerSearch: '', selectedContainerNumber: '', lineOperatorId: 0, yardBlockId: 0,
-      bay: null, row: null, tier: null, classification: ContainerGrade.A, condition: ContainerConditionStatus.Normal, inboundVehicle: '', remarks: '',
+      classification: ContainerGrade.A, condition: ContainerConditionStatus.Normal, inboundVehicle: '', remarks: '',
     };
+    this.inboundPos.reset({ bay: null, row: null, tier: null });
     this.inboundError = '';
   }
 
@@ -323,19 +424,22 @@ export class OperationsComponent implements OnInit {
     this.depotService.getMovements(visit.id).subscribe(m => this.selectedMovements = m);
   }
 
-  // ── Relocate ──
+  // ── Relocate (slide-over) ──
   openRelocate(visit: ContainerVisit) {
     if (!this.authService.canManageYard()) return;
     this.selectedVisit = visit;
     this.relocateForm = {
       yardBlockId: visit.yardBlockId,
-      bay: visit.bay ?? null,
-      row: visit.row ?? null,
-      tier: visit.tier ?? null,
       classification: visit.classification,
       condition: visit.condition,
       reason: '',
     };
+    this.relocatePos.setValue({
+      bay: visit.bay ?? null,
+      row: visit.row ?? null,
+      tier: visit.tier ?? null,
+    });
+    this.relocatePos.markAsPristine();
     this.showRelocate = true;
   }
 
@@ -343,16 +447,29 @@ export class OperationsComponent implements OnInit {
     return this.yardBlocks.find(b => b.id === this.relocateForm.yardBlockId);
   }
 
+  onRelocateBlockChange(): void {
+    this.relocatePos.controls.bay.updateValueAndValidity();
+    this.relocatePos.controls.row.updateValueAndValidity();
+    this.relocatePos.controls.tier.updateValueAndValidity();
+  }
+
+  get relocateFormInvalid(): boolean {
+    if (!this.selectedVisit || !this.relocateForm.yardBlockId) return true;
+    if (this.selectedRelocateBlock?.blockType === 'Physical' && this.relocatePos.invalid) return true;
+    return false;
+  }
+
   submitRelocate() {
     if (!this.authService.canManageYard()) return;
-    if (!this.selectedVisit || !this.relocateForm.yardBlockId) return;
+    if (this.relocateFormInvalid) return;
     this.relocateSaving = true;
+    const pos = this.relocatePos.value;
     const req: RelocateContainerRequest = {
-      containerNumber: this.selectedVisit.containerNumber,
+      containerNumber: this.selectedVisit!.containerNumber,
       yardBlockId: this.relocateForm.yardBlockId,
-      bay: this.relocateForm.bay ?? undefined,
-      row: this.relocateForm.row ?? undefined,
-      tier: this.relocateForm.tier ?? undefined,
+      bay: pos.bay ?? undefined,
+      row: pos.row ?? undefined,
+      tier: pos.tier ?? undefined,
       classification: this.relocateForm.classification,
       condition: this.relocateForm.condition,
       reason: this.relocateForm.reason,
@@ -391,22 +508,36 @@ export class OperationsComponent implements OnInit {
     this.relTabForm.selectedContainerNumber = c.containerNumber;
     this.relTabForm.containerSearch = c.containerNumber;
     this.selectedRelTabContainer = c;
+    this.relTabPos.controls.bay.updateValueAndValidity();
   }
 
   get selectedRelTabBlock(): YardBlock | undefined {
     return this.yardBlocks.find(b => b.id === this.relTabForm.yardBlockId);
   }
 
+  onRelTabBlockChange(): void {
+    this.relTabPos.controls.bay.updateValueAndValidity();
+    this.relTabPos.controls.row.updateValueAndValidity();
+    this.relTabPos.controls.tier.updateValueAndValidity();
+  }
+
+  get relTabFormInvalid(): boolean {
+    if (!this.relTabForm.selectedContainerNumber || !this.relTabForm.yardBlockId) return true;
+    if (this.selectedRelTabBlock?.blockType === 'Physical' && this.relTabPos.invalid) return true;
+    return false;
+  }
+
   submitRelocateTab() {
     if (!this.authService.canManageYard()) return;
-    if (!this.relTabForm.selectedContainerNumber || !this.relTabForm.yardBlockId) return;
+    if (this.relTabFormInvalid) return;
     this.relTabSaving = true;
+    const pos = this.relTabPos.value;
     const req: RelocateContainerRequest = {
       containerNumber: this.relTabForm.selectedContainerNumber,
       yardBlockId: this.relTabForm.yardBlockId,
-      bay: this.relTabForm.bay ?? undefined,
-      row: this.relTabForm.row ?? undefined,
-      tier: this.relTabForm.tier ?? undefined,
+      bay: pos.bay ?? undefined,
+      row: pos.row ?? undefined,
+      tier: pos.tier ?? undefined,
       classification: ContainerGrade.A,
       condition: ContainerConditionStatus.Normal,
       reason: this.relTabForm.remarks,
@@ -434,7 +565,8 @@ export class OperationsComponent implements OnInit {
   }
 
   resetRelocateTabForm() {
-    this.relTabForm = { containerSearch: '', selectedContainerNumber: '', yardBlockId: 0, bay: null, row: null, tier: null, remarks: '' };
+    this.relTabForm = { containerSearch: '', selectedContainerNumber: '', yardBlockId: 0, remarks: '' };
+    this.relTabPos.reset({ bay: null, row: null, tier: null });
     this.selectedRelTabContainer = null;
     this.relTabError = '';
   }
@@ -443,26 +575,54 @@ export class OperationsComponent implements OnInit {
     return [...new Set(this.inDepotVisits.map(v => v.yardBlockCode))].sort();
   }
 
-  // ── Bay parity hints (20ft → odd, 40ft → even) ──
-  private bayParityHint(size: string | undefined, bay: number | null): string {
-    if (bay == null || !size) return '';
-    if (size === '20' && bay % 2 === 0) return '20ft containers must use odd bays (1, 3, 5, …).';
-    if (size === '40' && bay % 2 !== 0) return '40ft containers must use even bays (2, 4, 6, …).';
+  // ── Error helpers for templates (Vietnamese messages) ──────────────────────
+  bayErrorText(control: AbstractControl | null): string {
+    if (!control || !control.errors) return '';
+    if (control.errors['bayParity']) {
+      const { size, expected } = control.errors['bayParity'] as { size: string; expected: 'odd' | 'even' };
+      return expected === 'odd'
+        ? `Container ${size}ft phải đặt ở bay lẻ (1, 3, 5, …).`
+        : `Container ${size}ft phải đặt ở bay chẵn (2, 4, 6, …).`;
+    }
+    if (control.errors['maxBound']) {
+      return `Bay vượt quá giới hạn block (tối đa ${control.errors['maxBound'].max}).`;
+    }
+    if (control.errors['min']) {
+      return `Bay phải ≥ 1.`;
+    }
     return '';
   }
 
+  rowErrorText(control: AbstractControl | null): string {
+    if (!control || !control.errors) return '';
+    if (control.errors['maxBound']) {
+      return `Row vượt quá giới hạn block (tối đa ${control.errors['maxBound'].max}).`;
+    }
+    if (control.errors['min']) {
+      return `Row phải ≥ 1.`;
+    }
+    return '';
+  }
+
+  tierErrorText(control: AbstractControl | null): string {
+    if (!control || !control.errors) return '';
+    if (control.errors['maxBound']) {
+      return `Tier vượt quá giới hạn block (tối đa ${control.errors['maxBound'].max}).`;
+    }
+    if (control.errors['min']) {
+      return `Tier phải ≥ 1.`;
+    }
+    return '';
+  }
+
+  // Legacy hint getters retained for backward compatibility with existing tests/copy.
   get inboundBayHint(): string {
-    const size = this.containers.find(c => c.containerNumber === this.inForm.selectedContainerNumber)?.containerSize;
-    return this.bayParityHint(size, this.inForm.bay);
+    return this.bayErrorText(this.inboundPos.controls.bay);
   }
-
   get relocateBayHint(): string {
-    if (!this.selectedVisit) return '';
-    const size = this.containers.find(c => c.containerNumber === this.selectedVisit!.containerNumber)?.containerSize;
-    return this.bayParityHint(size, this.relocateForm.bay);
+    return this.bayErrorText(this.relocatePos.controls.bay);
   }
-
   get relTabBayHint(): string {
-    return this.bayParityHint(this.selectedRelTabContainer?.containerSize, this.relTabForm.bay);
+    return this.bayErrorText(this.relTabPos.controls.bay);
   }
 }

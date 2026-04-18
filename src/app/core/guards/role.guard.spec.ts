@@ -87,4 +87,32 @@ describe('role guards', () => {
     TestBed.runInInjectionContext(() => operationsAccessGuard(dummyRoute, dummyState));
     expect(routerSpy.createUrlTree).toHaveBeenCalledWith(['/']);
   });
+
+  it('yardMapAccessGuard allows OrderClerk (canManageOrders)', async () => {
+    const { yardMapAccessGuard } = await import('./role.guard');
+    setup({ canGateInOut: () => false, canManageYard: () => false, canManageOrders: () => true });
+    const result = TestBed.runInInjectionContext(() => yardMapAccessGuard(dummyRoute, dummyState));
+    expect(result).toBeTrue();
+  });
+
+  it('yardMapAccessGuard allows GateOperator', async () => {
+    const { yardMapAccessGuard } = await import('./role.guard');
+    setup({ canGateInOut: () => true, canManageYard: () => false, canManageOrders: () => false });
+    const result = TestBed.runInInjectionContext(() => yardMapAccessGuard(dummyRoute, dummyState));
+    expect(result).toBeTrue();
+  });
+
+  it('yardMapAccessGuard allows YardPlanner', async () => {
+    const { yardMapAccessGuard } = await import('./role.guard');
+    setup({ canGateInOut: () => false, canManageYard: () => true, canManageOrders: () => false });
+    const result = TestBed.runInInjectionContext(() => yardMapAccessGuard(dummyRoute, dummyState));
+    expect(result).toBeTrue();
+  });
+
+  it('yardMapAccessGuard redirects when user has none of the 3 roles', async () => {
+    const { yardMapAccessGuard } = await import('./role.guard');
+    setup({ canGateInOut: () => false, canManageYard: () => false, canManageOrders: () => false });
+    TestBed.runInInjectionContext(() => yardMapAccessGuard(dummyRoute, dummyState));
+    expect(routerSpy.createUrlTree).toHaveBeenCalledWith(['/']);
+  });
 });

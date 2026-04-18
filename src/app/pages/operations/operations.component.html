@@ -90,7 +90,7 @@
         </div>
         <div>
           <label class="block text-[12px] font-medium text-[#555] mb-1">Yard Block <span class="text-[#D9534F]">*</span></label>
-          <select [(ngModel)]="inForm.yardBlockId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+          <select [(ngModel)]="inForm.yardBlockId" (ngModelChange)="onInboundBlockChange()" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
             <option [value]="0" disabled>Select...</option>
             @for (b of yardBlocks; track b.id) {
               <option [value]="b.id">{{ b.code }} ({{ b.blockType }})</option>
@@ -103,25 +103,40 @@
         <div class="grid grid-cols-3 gap-3 mb-1">
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">Bay</label>
-            <input type="number" [(ngModel)]="inForm.bay" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1"
-                   [class.border-[#F0AD4E]]="inboundBayHint">
+            <input type="number" [formControl]="inboundPos.controls.bay" min="1" [max]="selectedInboundBlock.bayCount ?? null"
+                   class="w-full border rounded px-3 py-1.5 text-[13px]"
+                   [class.border-[#CCC]]="inboundPos.controls.bay.valid || inboundPos.controls.bay.pristine"
+                   [class.border-[#D9534F]]="inboundPos.controls.bay.invalid && inboundPos.controls.bay.dirty">
+            @if (inboundPos.controls.bay.invalid && inboundPos.controls.bay.dirty) {
+              <div class="text-[11px] text-[#D9534F] mt-0.5">{{ bayErrorText(inboundPos.controls.bay) }}</div>
+            }
           </div>
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">Row</label>
-            <input type="number" [(ngModel)]="inForm.row" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+            <input type="number" [formControl]="inboundPos.controls.row" min="1" [max]="selectedInboundBlock.rowCount ?? null"
+                   class="w-full border rounded px-3 py-1.5 text-[13px]"
+                   [class.border-[#CCC]]="inboundPos.controls.row.valid || inboundPos.controls.row.pristine"
+                   [class.border-[#D9534F]]="inboundPos.controls.row.invalid && inboundPos.controls.row.dirty">
+            @if (inboundPos.controls.row.invalid && inboundPos.controls.row.dirty) {
+              <div class="text-[11px] text-[#D9534F] mt-0.5">{{ rowErrorText(inboundPos.controls.row) }}</div>
+            }
           </div>
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">Tier</label>
-            <input type="number" [(ngModel)]="inForm.tier" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+            <input type="number" [formControl]="inboundPos.controls.tier" min="1" [max]="selectedInboundBlock.tierCount ?? null"
+                   class="w-full border rounded px-3 py-1.5 text-[13px]"
+                   [class.border-[#CCC]]="inboundPos.controls.tier.valid || inboundPos.controls.tier.pristine"
+                   [class.border-[#D9534F]]="inboundPos.controls.tier.invalid && inboundPos.controls.tier.dirty">
+            @if (inboundPos.controls.tier.invalid && inboundPos.controls.tier.dirty) {
+              <div class="text-[11px] text-[#D9534F] mt-0.5">{{ tierErrorText(inboundPos.controls.tier) }}</div>
+            }
           </div>
         </div>
-        @if (inboundBayHint) {
-          <div class="text-[11px] text-[#8A6D3B] mb-3">
-            <i class="pi pi-exclamation-triangle text-[10px] mr-1"></i>{{ inboundBayHint }}
-          </div>
-        } @else {
-          <div class="mb-3"></div>
-        }
+        <div class="mb-3"></div>
+      } @else if (selectedInboundBlock && selectedInboundBlock.blockType === 'Virtual') {
+        <div class="mb-3 text-[11px] text-[#8A6D3B]">
+          <i class="pi pi-info-circle text-[10px] mr-1"></i>Block ảo không có vị trí bay/row/tier.
+        </div>
       }
 
       <div class="grid grid-cols-2 gap-3 mb-3">
@@ -161,7 +176,7 @@
         </div>
       }
       <button (click)="submitInbound()"
-              [disabled]="inboundSaving || !inForm.selectedContainerNumber || !inForm.lineOperatorId || !inForm.yardBlockId || !inForm.inboundVehicle"
+              [disabled]="inboundSaving || inboundFormInvalid"
               class="w-full bg-[#0275D8] text-white py-2 rounded text-[13px] font-medium hover:bg-[#025AA5] disabled:opacity-50 disabled:cursor-not-allowed">
         {{ inboundSaving ? 'Recording...' : 'Record Inbound' }}
       </button>
@@ -472,7 +487,7 @@
         <div class="flex-1 overflow-y-auto px-5 py-4">
           <div class="mb-3">
             <label class="block text-[12px] font-medium text-[#555] mb-1">Target Block <span class="text-[#D9534F]">*</span></label>
-            <select [(ngModel)]="relocateForm.yardBlockId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+            <select [(ngModel)]="relocateForm.yardBlockId" (ngModelChange)="onRelocateBlockChange()" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
               @for (b of yardBlocks; track b.id) {
                 <option [value]="b.id">{{ b.code }} ({{ b.blockType }})</option>
               }
@@ -482,25 +497,40 @@
             <div class="grid grid-cols-3 gap-3 mb-1">
               <div>
                 <label class="block text-[12px] font-medium text-[#555] mb-1">Bay</label>
-                <input type="number" [(ngModel)]="relocateForm.bay" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1"
-                       [class.border-[#F0AD4E]]="relocateBayHint">
+                <input type="number" [formControl]="relocatePos.controls.bay" min="1" [max]="selectedRelocateBlock.bayCount ?? null"
+                       class="w-full border rounded px-3 py-1.5 text-[13px]"
+                       [class.border-[#CCC]]="relocatePos.controls.bay.valid || relocatePos.controls.bay.pristine"
+                       [class.border-[#D9534F]]="relocatePos.controls.bay.invalid && relocatePos.controls.bay.dirty">
+                @if (relocatePos.controls.bay.invalid && relocatePos.controls.bay.dirty) {
+                  <div class="text-[11px] text-[#D9534F] mt-0.5">{{ bayErrorText(relocatePos.controls.bay) }}</div>
+                }
               </div>
               <div>
                 <label class="block text-[12px] font-medium text-[#555] mb-1">Row</label>
-                <input type="number" [(ngModel)]="relocateForm.row" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+                <input type="number" [formControl]="relocatePos.controls.row" min="1" [max]="selectedRelocateBlock.rowCount ?? null"
+                       class="w-full border rounded px-3 py-1.5 text-[13px]"
+                       [class.border-[#CCC]]="relocatePos.controls.row.valid || relocatePos.controls.row.pristine"
+                       [class.border-[#D9534F]]="relocatePos.controls.row.invalid && relocatePos.controls.row.dirty">
+                @if (relocatePos.controls.row.invalid && relocatePos.controls.row.dirty) {
+                  <div class="text-[11px] text-[#D9534F] mt-0.5">{{ rowErrorText(relocatePos.controls.row) }}</div>
+                }
               </div>
               <div>
                 <label class="block text-[12px] font-medium text-[#555] mb-1">Tier</label>
-                <input type="number" [(ngModel)]="relocateForm.tier" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+                <input type="number" [formControl]="relocatePos.controls.tier" min="1" [max]="selectedRelocateBlock.tierCount ?? null"
+                       class="w-full border rounded px-3 py-1.5 text-[13px]"
+                       [class.border-[#CCC]]="relocatePos.controls.tier.valid || relocatePos.controls.tier.pristine"
+                       [class.border-[#D9534F]]="relocatePos.controls.tier.invalid && relocatePos.controls.tier.dirty">
+                @if (relocatePos.controls.tier.invalid && relocatePos.controls.tier.dirty) {
+                  <div class="text-[11px] text-[#D9534F] mt-0.5">{{ tierErrorText(relocatePos.controls.tier) }}</div>
+                }
               </div>
             </div>
-            @if (relocateBayHint) {
-              <div class="text-[11px] text-[#8A6D3B] mb-3">
-                <i class="pi pi-exclamation-triangle text-[10px] mr-1"></i>{{ relocateBayHint }}
-              </div>
-            } @else {
-              <div class="mb-3"></div>
-            }
+            <div class="mb-3"></div>
+          } @else if (selectedRelocateBlock && selectedRelocateBlock.blockType === 'Virtual') {
+            <div class="mb-3 text-[11px] text-[#8A6D3B]">
+              <i class="pi pi-info-circle text-[10px] mr-1"></i>Block ảo không có vị trí bay/row/tier.
+            </div>
           }
           <div class="grid grid-cols-2 gap-3 mb-3">
             <div>
@@ -526,7 +556,7 @@
                       class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" placeholder="Reason for relocation..."></textarea>
           </div>
           <button (click)="submitRelocate()"
-                  [disabled]="relocateSaving || !relocateForm.yardBlockId"
+                  [disabled]="relocateSaving || relocateFormInvalid"
                   class="w-full bg-[#0275D8] text-white py-2 rounded text-[13px] font-medium hover:bg-[#025AA5] disabled:opacity-50">
             {{ relocateSaving ? 'Relocating...' : 'Relocate Container' }}
           </button>
@@ -587,7 +617,7 @@
       <!-- New Location -->
       <div class="mb-3">
         <label class="block text-[12px] font-medium text-[#555] mb-1">New Block <span class="text-[#D9534F]">*</span></label>
-        <select [(ngModel)]="relTabForm.yardBlockId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+        <select [(ngModel)]="relTabForm.yardBlockId" (ngModelChange)="onRelTabBlockChange()" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
           <option [value]="0" disabled>Select block...</option>
           @for (b of yardBlocks; track b.id) {
             <option [value]="b.id">{{ b.code }} ({{ b.blockType }})</option>
@@ -599,25 +629,40 @@
         <div class="grid grid-cols-3 gap-3 mb-1">
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">New Bay <span class="text-[#D9534F]">*</span></label>
-            <input type="number" [(ngModel)]="relTabForm.bay" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1"
-                   [class.border-[#F0AD4E]]="relTabBayHint">
+            <input type="number" [formControl]="relTabPos.controls.bay" min="1" [max]="selectedRelTabBlock.bayCount ?? null"
+                   class="w-full border rounded px-3 py-1.5 text-[13px]"
+                   [class.border-[#CCC]]="relTabPos.controls.bay.valid || relTabPos.controls.bay.pristine"
+                   [class.border-[#D9534F]]="relTabPos.controls.bay.invalid && relTabPos.controls.bay.dirty">
+            @if (relTabPos.controls.bay.invalid && relTabPos.controls.bay.dirty) {
+              <div class="text-[11px] text-[#D9534F] mt-0.5">{{ bayErrorText(relTabPos.controls.bay) }}</div>
+            }
           </div>
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">New Row <span class="text-[#D9534F]">*</span></label>
-            <input type="number" [(ngModel)]="relTabForm.row" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+            <input type="number" [formControl]="relTabPos.controls.row" min="1" [max]="selectedRelTabBlock.rowCount ?? null"
+                   class="w-full border rounded px-3 py-1.5 text-[13px]"
+                   [class.border-[#CCC]]="relTabPos.controls.row.valid || relTabPos.controls.row.pristine"
+                   [class.border-[#D9534F]]="relTabPos.controls.row.invalid && relTabPos.controls.row.dirty">
+            @if (relTabPos.controls.row.invalid && relTabPos.controls.row.dirty) {
+              <div class="text-[11px] text-[#D9534F] mt-0.5">{{ rowErrorText(relTabPos.controls.row) }}</div>
+            }
           </div>
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">New Tier <span class="text-[#D9534F]">*</span></label>
-            <input type="number" [(ngModel)]="relTabForm.tier" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]" min="1">
+            <input type="number" [formControl]="relTabPos.controls.tier" min="1" [max]="selectedRelTabBlock.tierCount ?? null"
+                   class="w-full border rounded px-3 py-1.5 text-[13px]"
+                   [class.border-[#CCC]]="relTabPos.controls.tier.valid || relTabPos.controls.tier.pristine"
+                   [class.border-[#D9534F]]="relTabPos.controls.tier.invalid && relTabPos.controls.tier.dirty">
+            @if (relTabPos.controls.tier.invalid && relTabPos.controls.tier.dirty) {
+              <div class="text-[11px] text-[#D9534F] mt-0.5">{{ tierErrorText(relTabPos.controls.tier) }}</div>
+            }
           </div>
         </div>
-        @if (relTabBayHint) {
-          <div class="text-[11px] text-[#8A6D3B] mb-3">
-            <i class="pi pi-exclamation-triangle text-[10px] mr-1"></i>{{ relTabBayHint }}
-          </div>
-        } @else {
-          <div class="mb-3"></div>
-        }
+        <div class="mb-3"></div>
+      } @else if (selectedRelTabBlock && selectedRelTabBlock.blockType === 'Virtual') {
+        <div class="mb-3 text-[11px] text-[#8A6D3B]">
+          <i class="pi pi-info-circle text-[10px] mr-1"></i>Block ảo không có vị trí bay/row/tier.
+        </div>
       }
 
       <div class="mb-4">
@@ -632,7 +677,7 @@
         </div>
       }
       <button (click)="submitRelocateTab()"
-              [disabled]="relTabSaving || !relTabForm.selectedContainerNumber || !relTabForm.yardBlockId"
+              [disabled]="relTabSaving || relTabFormInvalid"
               class="w-full bg-[#0275D8] text-white py-2 rounded text-[13px] font-medium hover:bg-[#025AA5] disabled:opacity-50 disabled:cursor-not-allowed">
         {{ relTabSaving ? 'Relocating...' : 'Relocate Container' }}
       </button>

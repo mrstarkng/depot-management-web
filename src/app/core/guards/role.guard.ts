@@ -22,4 +22,6 @@ export const gateAccessGuard = permissionGuard(auth => auth.canGateInOut());
 export const orderAccessGuard = permissionGuard(auth => auth.canManageOrders());
 export const managerAccessGuard = permissionGuard(auth => auth.isManager());
 export const operationsAccessGuard = permissionGuard(auth => auth.canGateInOut() || auth.canManageYard());
-export const yardMapAccessGuard = permissionGuard(auth => auth.canGateInOut() || auth.canManageYard());
+export const yardMapAccessGuard = permissionGuard(
+  auth => auth.canGateInOut() || auth.canManageYard() || auth.canManageOrders(),
+);

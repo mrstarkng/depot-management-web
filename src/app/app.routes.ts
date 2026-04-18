@@ -61,13 +61,13 @@ export const routes: Routes = [
   },
   {
     path: 'customers',
-    canActivate: [authGuard, managerAccessGuard],
+    canActivate: [authGuard, orderAccessGuard],
     loadComponent: () =>
       import('./pages/customers/customers.component').then(m => m.CustomersComponent),
   },
   {
     path: 'line-operators',
-    canActivate: [authGuard, managerAccessGuard],
+    canActivate: [authGuard, orderAccessGuard],
     loadComponent: () =>
       import('./pages/line-operators/line-operators.component').then(m => m.LineOperatorsComponent),
   },
