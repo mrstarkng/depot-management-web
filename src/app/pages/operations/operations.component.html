@@ -8,6 +8,7 @@
 <div class="flex gap-1 mb-4 border-b border-[#E0E0E0]">
   @if (authService.canGateInOut()) {
     <button (click)="setActiveTab('inbound')"
+            data-cy="tab-inbound"
             class="px-4 py-2 text-[13px] font-medium border-b-2 transition-colors"
             [class.border-[#0275D8]]="activeTab === 'inbound'"
             [class.text-[#0275D8]]="activeTab === 'inbound'"
@@ -16,6 +17,7 @@
       <i class="pi pi-sign-in mr-1.5"></i>Inbound
     </button>
     <button (click)="setActiveTab('outbound')"
+            data-cy="tab-outbound"
             class="px-4 py-2 text-[13px] font-medium border-b-2 transition-colors"
             [class.border-[#0275D8]]="activeTab === 'outbound'"
             [class.text-[#0275D8]]="activeTab === 'outbound'"
@@ -56,6 +58,7 @@
         <label class="block text-[12px] font-medium text-[#555] mb-1">Container <span class="text-[#D9534F]">*</span></label>
         <div class="relative">
           <input [(ngModel)]="inForm.containerSearch" placeholder="Search container number..."
+                 data-cy="gatein-container-search"
                  class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] focus:border-[#0275D8] focus:outline-none">
           @if (inForm.containerSearch && !inForm.selectedContainerNumber) {
             <div class="absolute z-10 w-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg max-h-[200px] overflow-y-auto">
@@ -90,10 +93,12 @@
         </div>
         <div>
           <label class="block text-[12px] font-medium text-[#555] mb-1">Yard Block <span class="text-[#D9534F]">*</span></label>
-          <select [(ngModel)]="inForm.yardBlockId" (ngModelChange)="onInboundBlockChange()" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+          <select [(ngModel)]="inForm.yardBlockId" (ngModelChange)="onInboundBlockChange()"
+                  data-cy="gatein-block-select"
+                  class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
             <option [value]="0" disabled>Select...</option>
             @for (b of yardBlocks; track b.id) {
-              <option [value]="b.id" [disabled]="isBlockFull(b)">
+              <option [value]="b.id" [disabled]="isBlockFull(b)" [attr.data-cy]="'gatein-block-option'">
                 {{ b.code }} ({{ b.blockType }}){{ isBlockFull(b) ? ' — FULL' : (isBlockNearFull(b) ? ' — sắp đầy' : '') }}
               </option>
             }
@@ -110,7 +115,7 @@
         <div class="grid grid-cols-3 gap-3 mb-1">
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">Bay</label>
-            <input type="number" [formControl]="inboundPos.controls.bay" min="1" [max]="selectedInboundBlock.bayCount ?? null"
+            <input type="number" [formControl]="inboundPos.controls.bay" min="1" [max]="selectedInboundBlock.bayCount ?? null" data-cy="gatein-bay"
                    class="w-full border rounded px-3 py-1.5 text-[13px]"
                    [class.border-[#CCC]]="inboundPos.controls.bay.valid || inboundPos.controls.bay.pristine"
                    [class.border-[#D9534F]]="inboundPos.controls.bay.invalid && inboundPos.controls.bay.dirty">
@@ -120,7 +125,7 @@
           </div>
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">Row</label>
-            <input type="number" [formControl]="inboundPos.controls.row" min="1" [max]="selectedInboundBlock.rowCount ?? null"
+            <input type="number" [formControl]="inboundPos.controls.row" min="1" [max]="selectedInboundBlock.rowCount ?? null" data-cy="gatein-row"
                    class="w-full border rounded px-3 py-1.5 text-[13px]"
                    [class.border-[#CCC]]="inboundPos.controls.row.valid || inboundPos.controls.row.pristine"
                    [class.border-[#D9534F]]="inboundPos.controls.row.invalid && inboundPos.controls.row.dirty">
@@ -131,7 +136,7 @@
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">Tier</label>
             <div class="flex items-center gap-2">
-              <select [formControl]="inboundPos.controls.tier"
+              <select [formControl]="inboundPos.controls.tier" data-cy="gatein-tier"
                       class="flex-1 border rounded px-2 py-1.5 text-[13px] bg-white"
                       [class.border-[#CCC]]="inboundPos.controls.tier.valid || inboundPos.controls.tier.pristine"
                       [class.border-[#D9534F]]="inboundPos.controls.tier.invalid && inboundPos.controls.tier.dirty">
@@ -204,6 +209,7 @@
       }
       <button (click)="submitInbound()"
               [disabled]="inboundSaving || inboundFormInvalid"
+              data-cy="gatein-submit"
               class="w-full bg-[#0275D8] text-white py-2 rounded text-[13px] font-medium hover:bg-[#025AA5] disabled:opacity-50 disabled:cursor-not-allowed">
         {{ inboundSaving ? 'Recording...' : 'Record Inbound' }}
       </button>

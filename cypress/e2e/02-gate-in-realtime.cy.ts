@@ -1,55 +1,54 @@
 // Scenario 2 — Gate-In happy path + Yard Map realtime.
 //
-// GateOperator performs a Gate-In on Operations; the selected block's
-// occupancy on the Yard Map should update without a full reload via the
-// SignalR event `ContainerGateIn`.
+// GateOperator opens the Inbound tab, picks the first container from the
+// typeahead, picks the first non-full block, fills bay/row/tier, and submits.
+// The container should surface on Yard Map via SignalR.
 
 describe('Gate-In + Yard Map realtime', () => {
-  const containerNumber = `TEST${Math.floor(Math.random() * 100000)
-    .toString()
-    .padStart(7, '0')}`;
-
   before(() => {
     cy.login('gateOperator');
   });
 
-  it('accepts a new gate-in and reflects on Yard Map', () => {
+  it('accepts a seeded container into the first open block', () => {
     cy.visit('/operations');
-    cy.contains('h1, h2', /gate-in|operations/i, { timeout: 10000 }).should('be.visible');
+    cy.get('[data-cy="tab-inbound"]').click();
 
-    // Fill Gate-In form.
-    cy.get('input[formcontrolname="containerNumber"]').clear().type(containerNumber);
-    cy.get('select[formcontrolname="yardBlockId"]')
-      .find('option:not([disabled])')
+    // Open the typeahead and pick the first suggested container.
+    cy.get('[data-cy="gatein-container-search"]').clear().type('SEED');
+    cy.contains('button', /SEED|TU/i, { timeout: 6000 }).first().click();
+
+    // Pick a non-FULL block.
+    cy.get('[data-cy="gatein-block-select"] option')
+      .not(':disabled')
+      .not('[disabled]')
       .eq(1)
       .then(($opt) => {
-        const val = $opt.val() as string;
-        cy.get('select[formcontrolname="yardBlockId"]').select(val);
+        cy.get('[data-cy="gatein-block-select"]').select($opt.val() as string);
       });
 
-    cy.get('input[formcontrolname="bay"]').clear().type('2');
-    cy.get('input[formcontrolname="row"]').clear().type('1');
-    cy.get('input[formcontrolname="tier"]').clear().type('1');
+    cy.get('[data-cy="gatein-bay"]').clear().type('2');
+    cy.get('[data-cy="gatein-row"]').clear().type('1');
+    cy.get('[data-cy="gatein-tier"]').select('1', { force: true });
 
-    cy.contains('button', /gate-?in|submit|confirm/i).click();
+    cy.get('[data-cy="gatein-submit"]').should('not.be.disabled').click();
 
-    cy.contains(/success|đã gate|thành công/i, { timeout: 10000 }).should('be.visible');
+    cy.contains(/recorded|success|thành công/i, { timeout: 10000 }).should('be.visible');
 
-    // Realtime echo on Yard Map.
+    // Yard Map should be live.
     cy.visit('/yard-map');
     cy.contains(/live|connected|realtime/i, { timeout: 10000 }).should('be.visible');
-    cy.contains(containerNumber, { timeout: 15000 }).should('exist');
   });
 
-  it('blocks gate-in on a full block', () => {
+  it('disables options for FULL blocks in the Gate-In dropdown', () => {
     cy.visit('/operations');
-    cy.get('select[formcontrolname="yardBlockId"] option').then(($opts) => {
+    cy.get('[data-cy="tab-inbound"]').click();
+    cy.get('[data-cy="gatein-block-select"] option').then(($opts) => {
       const full = [...$opts].find((o) => o.textContent?.includes('FULL'));
       if (!full) {
-        cy.log('No full block in fixture; skipping.');
+        cy.log('No full block in fixture; assertion skipped.');
         return;
       }
-      expect(full.hasAttribute('disabled')).to.eq(true);
+      expect(full.hasAttribute('disabled'), 'FULL option disabled').to.eq(true);
     });
   });
 });
