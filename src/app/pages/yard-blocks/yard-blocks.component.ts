@@ -24,6 +24,8 @@ export class YardBlocksComponent implements OnInit {
   search = '';
   filterType = 'All';
   filterStatus = 'All';
+  /** TF-17 — filter theo DEC-010 Core vs Extension. */
+  filterCore: 'All' | 'Core' | 'Extension' = 'All';
 
   // Sort
   sortKey: SortKey = 'code';
@@ -82,7 +84,10 @@ export class YardBlocksComponent implements OnInit {
       const matchStatus = this.filterStatus === 'All' ||
         (this.filterStatus === 'Active' && b.isActive) ||
         (this.filterStatus === 'Inactive' && !b.isActive);
-      return matchQ && matchType && matchStatus;
+      const matchCore = this.filterCore === 'All'
+        || (this.filterCore === 'Core' && !!b.isCore)
+        || (this.filterCore === 'Extension' && !b.isCore);
+      return matchQ && matchType && matchStatus && matchCore;
     });
   }
 
@@ -113,6 +118,7 @@ export class YardBlocksComponent implements OnInit {
     this.search = '';
     this.filterType = 'All';
     this.filterStatus = 'All';
+    this.filterCore = 'All';
     this.page = 1;
   }
 

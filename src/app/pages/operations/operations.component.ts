@@ -19,8 +19,10 @@ import { StatusBadgeComponent, PaginationComponent } from '../../core/components
 import {
   YardBlock, LineOperator, ContainerOverview, ContainerVisit, ContainerMovement,
   InboundContainerRequest, OutboundContainerRequest, RelocateContainerRequest,
-  DeliveryOrder, ContainerGrade, ContainerConditionStatus
+  DeliveryOrder, ContainerGrade, ContainerConditionStatus,
+  StackStateDto, StackStateTier,
 } from '../../core/models/depot.models';
+import { Subject, debounceTime } from 'rxjs';
 
 // ── Validator factories (exported for unit tests) ────────────────────────────
 /**
@@ -50,6 +52,36 @@ export function bayParityValidator(sizeGetter: () => string | undefined | null):
  * Dynamic upper-bound validator. The limit is read via getter so it tracks the
  * currently selected block dimensions without needing to rebuild validators.
  */
+/**
+ * Tier stack rule (BR-FE-UI-03):
+ * - Tier 1 is always valid.
+ * - Tier N >= 2 requires tier N-1 to be occupied.
+ * - Target tier must not itself be already occupied.
+ * Stack state is read lazily via getter so the validator stays in sync with
+ * the most recent API response.
+ */
+export function tierStackValidator(stackGetter: () => StackStateDto | null): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const raw = control.value;
+    if (raw === null || raw === undefined || raw === '') return null;
+    const tier = Number(raw);
+    if (!Number.isFinite(tier) || tier < 1) return null;
+    const stack = stackGetter();
+    if (!stack) return null;
+    const tiers = stack.tiers ?? [];
+    const target = tiers.find(t => t.tier === tier);
+    if (target?.occupied) {
+      return { tierStack: { reason: 'occupied', tier } };
+    }
+    if (tier === 1) return null;
+    const below = tiers.find(t => t.tier === tier - 1);
+    if (!below?.occupied) {
+      return { tierStack: { reason: 'noBottom', tier } };
+    }
+    return null;
+  };
+}
+
 export function maxFromGetter(maxGetter: () => number | null | undefined): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const max = maxGetter();
@@ -98,6 +130,14 @@ function buildPositionGroup(
 })
 export class OperationsComponent implements OnInit {
   activeTab: 'inbound' | 'outbound' | 'indepot' | 'relocate' = 'inbound';
+
+  // ── Stack state cache (TF-02 / BR-FE-UI-03) ────────────────────────────
+  inboundStack: StackStateDto | null = null;
+  relocateStack: StackStateDto | null = null;
+  relTabStack: StackStateDto | null = null;
+  private readonly inboundStackQuery$ = new Subject<{ blockId: number; bay: number; row: number }>();
+  private readonly relocateStackQuery$ = new Subject<{ blockId: number; bay: number; row: number }>();
+  private readonly relTabStackQuery$ = new Subject<{ blockId: number; bay: number; row: number }>();
 
   // Reference data
   yardBlocks: YardBlock[] = [];
@@ -190,6 +230,90 @@ export class OperationsComponent implements OnInit {
     this.activeTab = this.defaultTab();
     this.loadReferenceData();
     this.loadInDepotVisits();
+
+    // TF-02 — debounced stack-state fetch for each of 3 position forms
+    this.inboundStackQuery$.pipe(debounceTime(300)).subscribe(q => {
+      this.depotService.getBlockStackState(q.blockId, q.bay, q.row).subscribe({
+        next: s => { this.inboundStack = s; this.inboundPos.controls.tier.updateValueAndValidity(); },
+        error: () => { this.inboundStack = null; },
+      });
+    });
+    this.relocateStackQuery$.pipe(debounceTime(300)).subscribe(q => {
+      this.depotService.getBlockStackState(q.blockId, q.bay, q.row).subscribe({
+        next: s => { this.relocateStack = s; this.relocatePos.controls.tier.updateValueAndValidity(); },
+        error: () => { this.relocateStack = null; },
+      });
+    });
+    this.relTabStackQuery$.pipe(debounceTime(300)).subscribe(q => {
+      this.depotService.getBlockStackState(q.blockId, q.bay, q.row).subscribe({
+        next: s => { this.relTabStack = s; this.relTabPos.controls.tier.updateValueAndValidity(); },
+        error: () => { this.relTabStack = null; },
+      });
+    });
+
+    // Feed the subjects when bay/row change on each form
+    this.inboundPos.valueChanges.subscribe(v => {
+      const block = this.selectedInboundBlock;
+      if (block?.blockType === 'Physical' && block.id && v.bay && v.row) {
+        this.inboundStackQuery$.next({ blockId: block.id, bay: Number(v.bay), row: Number(v.row) });
+      } else {
+        this.inboundStack = null;
+      }
+    });
+    this.relocatePos.valueChanges.subscribe(v => {
+      const block = this.selectedRelocateBlock;
+      if (block?.blockType === 'Physical' && block.id && v.bay && v.row) {
+        this.relocateStackQuery$.next({ blockId: block.id, bay: Number(v.bay), row: Number(v.row) });
+      } else {
+        this.relocateStack = null;
+      }
+    });
+    this.relTabPos.valueChanges.subscribe(v => {
+      const block = this.selectedRelTabBlock;
+      if (block?.blockType === 'Physical' && block.id && v.bay && v.row) {
+        this.relTabStackQuery$.next({ blockId: block.id, bay: Number(v.bay), row: Number(v.row) });
+      } else {
+        this.relTabStack = null;
+      }
+    });
+
+    // Attach tier stack async-style validators (sync check against cached state)
+    this.inboundPos.controls.tier.addValidators(
+      tierStackValidator(() => this.inboundStack),
+    );
+    this.relocatePos.controls.tier.addValidators(
+      tierStackValidator(() => this.relocateStack),
+    );
+    this.relTabPos.controls.tier.addValidators(
+      tierStackValidator(() => this.relTabStack),
+    );
+  }
+
+  /**
+   * Tier N is enable-able when:
+   *  - N === 1 (ground level) — always available.
+   *  - N >= 2 — only if tier N-1 is occupied=true in the fetched stack state.
+   * Also: the target tier itself must not already be occupied.
+   */
+  isTierEnabled(stack: StackStateDto | null, tier: number): boolean {
+    if (tier < 1) return false;
+    if (!stack) return true; // no data yet: don't block user
+    const tiers = stack.tiers ?? [];
+    const target = tiers.find(t => t.tier === tier);
+    if (target?.occupied) return false;
+    if (tier === 1) return true;
+    const below = tiers.find(t => t.tier === tier - 1);
+    return !!below?.occupied;
+  }
+
+  tierOptionsFor(block: YardBlock | undefined, stack: StackStateDto | null): { tier: number; enabled: boolean; occupied: boolean }[] {
+    const max = block?.tierCount ?? 0;
+    const result: { tier: number; enabled: boolean; occupied: boolean }[] = [];
+    for (let t = 1; t <= max; t++) {
+      const occupied = !!stack?.tiers.find(x => x.tier === t)?.occupied;
+      result.push({ tier: t, enabled: this.isTierEnabled(stack, t), occupied });
+    }
+    return result;
   }
 
   private defaultTab(): 'inbound' | 'outbound' | 'indepot' | 'relocate' {
@@ -606,6 +730,12 @@ export class OperationsComponent implements OnInit {
 
   tierErrorText(control: AbstractControl | null): string {
     if (!control || !control.errors) return '';
+    if (control.errors['tierStack']) {
+      const reason = control.errors['tierStack'].reason;
+      return reason === 'occupied'
+        ? `Tier ${control.errors['tierStack'].tier} đã có container — chọn tier khác.`
+        : `Tier ${control.errors['tierStack'].tier} không hợp lệ: cần có container ở tier bên dưới trước.`;
+    }
     if (control.errors['maxBound']) {
       return `Tier vượt quá giới hạn block (tối đa ${control.errors['maxBound'].max}).`;
     }

@@ -123,10 +123,30 @@
           </div>
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">Tier</label>
-            <input type="number" [formControl]="inboundPos.controls.tier" min="1" [max]="selectedInboundBlock.tierCount ?? null"
-                   class="w-full border rounded px-3 py-1.5 text-[13px]"
-                   [class.border-[#CCC]]="inboundPos.controls.tier.valid || inboundPos.controls.tier.pristine"
-                   [class.border-[#D9534F]]="inboundPos.controls.tier.invalid && inboundPos.controls.tier.dirty">
+            <div class="flex items-center gap-2">
+              <select [formControl]="inboundPos.controls.tier"
+                      class="flex-1 border rounded px-2 py-1.5 text-[13px] bg-white"
+                      [class.border-[#CCC]]="inboundPos.controls.tier.valid || inboundPos.controls.tier.pristine"
+                      [class.border-[#D9534F]]="inboundPos.controls.tier.invalid && inboundPos.controls.tier.dirty">
+                <option [ngValue]="null">—</option>
+                @for (opt of tierOptionsFor(selectedInboundBlock, inboundStack); track opt.tier) {
+                  <option [ngValue]="opt.tier" [disabled]="!opt.enabled">
+                    Tier {{ opt.tier }}{{ opt.occupied ? ' (đã có)' : (opt.enabled ? '' : ' — khoá') }}
+                  </option>
+                }
+              </select>
+              <div class="flex flex-col-reverse gap-0.5">
+                @for (opt of tierOptionsFor(selectedInboundBlock, inboundStack); track opt.tier) {
+                  <span class="w-4 h-2 rounded-sm border"
+                        [class.bg-[#0275D8]]="opt.occupied"
+                        [class.border-[#0275D8]]="opt.occupied"
+                        [class.border-[#CCC]]="!opt.occupied && opt.enabled"
+                        [class.bg-[#F5F5F5]]="!opt.occupied && !opt.enabled"
+                        [class.border-[#DDD]]="!opt.occupied && !opt.enabled"
+                        [title]="'Tier ' + opt.tier + (opt.occupied ? ' — đã có container' : opt.enabled ? ' — trống' : ' — khoá (cần tier bên dưới)')"></span>
+                }
+              </div>
+            </div>
             @if (inboundPos.controls.tier.invalid && inboundPos.controls.tier.dirty) {
               <div class="text-[11px] text-[#D9534F] mt-0.5">{{ tierErrorText(inboundPos.controls.tier) }}</div>
             }
@@ -517,10 +537,29 @@
               </div>
               <div>
                 <label class="block text-[12px] font-medium text-[#555] mb-1">Tier</label>
-                <input type="number" [formControl]="relocatePos.controls.tier" min="1" [max]="selectedRelocateBlock.tierCount ?? null"
-                       class="w-full border rounded px-3 py-1.5 text-[13px]"
-                       [class.border-[#CCC]]="relocatePos.controls.tier.valid || relocatePos.controls.tier.pristine"
-                       [class.border-[#D9534F]]="relocatePos.controls.tier.invalid && relocatePos.controls.tier.dirty">
+                <div class="flex items-center gap-2">
+                  <select [formControl]="relocatePos.controls.tier"
+                          class="flex-1 border rounded px-2 py-1.5 text-[13px] bg-white"
+                          [class.border-[#CCC]]="relocatePos.controls.tier.valid || relocatePos.controls.tier.pristine"
+                          [class.border-[#D9534F]]="relocatePos.controls.tier.invalid && relocatePos.controls.tier.dirty">
+                    <option [ngValue]="null">—</option>
+                    @for (opt of tierOptionsFor(selectedRelocateBlock, relocateStack); track opt.tier) {
+                      <option [ngValue]="opt.tier" [disabled]="!opt.enabled">
+                        Tier {{ opt.tier }}{{ opt.occupied ? ' (đã có)' : (opt.enabled ? '' : ' — khoá') }}
+                      </option>
+                    }
+                  </select>
+                  <div class="flex flex-col-reverse gap-0.5">
+                    @for (opt of tierOptionsFor(selectedRelocateBlock, relocateStack); track opt.tier) {
+                      <span class="w-4 h-2 rounded-sm border"
+                            [class.bg-[#0275D8]]="opt.occupied"
+                            [class.border-[#0275D8]]="opt.occupied"
+                            [class.border-[#CCC]]="!opt.occupied && opt.enabled"
+                            [class.bg-[#F5F5F5]]="!opt.occupied && !opt.enabled"
+                            [class.border-[#DDD]]="!opt.occupied && !opt.enabled"></span>
+                    }
+                  </div>
+                </div>
                 @if (relocatePos.controls.tier.invalid && relocatePos.controls.tier.dirty) {
                   <div class="text-[11px] text-[#D9534F] mt-0.5">{{ tierErrorText(relocatePos.controls.tier) }}</div>
                 }
@@ -649,10 +688,29 @@
           </div>
           <div>
             <label class="block text-[12px] font-medium text-[#555] mb-1">New Tier <span class="text-[#D9534F]">*</span></label>
-            <input type="number" [formControl]="relTabPos.controls.tier" min="1" [max]="selectedRelTabBlock.tierCount ?? null"
-                   class="w-full border rounded px-3 py-1.5 text-[13px]"
-                   [class.border-[#CCC]]="relTabPos.controls.tier.valid || relTabPos.controls.tier.pristine"
-                   [class.border-[#D9534F]]="relTabPos.controls.tier.invalid && relTabPos.controls.tier.dirty">
+            <div class="flex items-center gap-2">
+              <select [formControl]="relTabPos.controls.tier"
+                      class="flex-1 border rounded px-2 py-1.5 text-[13px] bg-white"
+                      [class.border-[#CCC]]="relTabPos.controls.tier.valid || relTabPos.controls.tier.pristine"
+                      [class.border-[#D9534F]]="relTabPos.controls.tier.invalid && relTabPos.controls.tier.dirty">
+                <option [ngValue]="null">—</option>
+                @for (opt of tierOptionsFor(selectedRelTabBlock, relTabStack); track opt.tier) {
+                  <option [ngValue]="opt.tier" [disabled]="!opt.enabled">
+                    Tier {{ opt.tier }}{{ opt.occupied ? ' (đã có)' : (opt.enabled ? '' : ' — khoá') }}
+                  </option>
+                }
+              </select>
+              <div class="flex flex-col-reverse gap-0.5">
+                @for (opt of tierOptionsFor(selectedRelTabBlock, relTabStack); track opt.tier) {
+                  <span class="w-4 h-2 rounded-sm border"
+                        [class.bg-[#0275D8]]="opt.occupied"
+                        [class.border-[#0275D8]]="opt.occupied"
+                        [class.border-[#CCC]]="!opt.occupied && opt.enabled"
+                        [class.bg-[#F5F5F5]]="!opt.occupied && !opt.enabled"
+                        [class.border-[#DDD]]="!opt.occupied && !opt.enabled"></span>
+                }
+              </div>
+            </div>
             @if (relTabPos.controls.tier.invalid && relTabPos.controls.tier.dirty) {
               <div class="text-[11px] text-[#D9534F] mt-0.5">{{ tierErrorText(relTabPos.controls.tier) }}</div>
             }

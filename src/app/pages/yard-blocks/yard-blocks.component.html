@@ -25,6 +25,12 @@
     <option value="Active">Active</option>
     <option value="Inactive">Inactive</option>
   </select>
+  <select [(ngModel)]="filterCore" (ngModelChange)="page = 1" class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white"
+          title="DEC-010 — Core seeded blocks vs Extension">
+    <option value="All">Tất cả</option>
+    <option value="Core">Core</option>
+    <option value="Extension">Extension</option>
+  </select>
   <button (click)="resetFilter()" class="text-[12px] text-[#0275D8] hover:underline">Reset</button>
 </div>
 

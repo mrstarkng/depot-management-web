@@ -338,6 +338,19 @@ export interface DepotDashboard {
   expiringSoonOrders?: ExpiringSoonOrder[];
 }
 
+// ── Tier Stack (EP-YBSTACK-01 / BR-FE-UI-03) ──
+export interface StackStateTier {
+  tier: number;
+  occupied: boolean;
+  containerNumber?: string | null;
+}
+
+export interface StackStateDto {
+  bay: number;
+  row: number;
+  tiers: StackStateTier[];
+}
+
 // ── Yard Map (DEC-009) ──
 export enum YardBlockCategory {
   Standard = 'Standard',

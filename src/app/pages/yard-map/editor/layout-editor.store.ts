@@ -35,6 +35,10 @@ export class LayoutEditorStore {
   readonly pendingRequest = signal(false);
   readonly dirtyBlocks = signal<Record<number, DirtyBlockPatch>>({});
   readonly saving = signal(false);
+  /** TF-16 — consecutive heartbeat failures. Resets on successful beat. */
+  readonly heartbeatFailCount = signal(0);
+  readonly lastHeartbeatSuccess = signal<number | null>(null);
+  private readonly MAX_HEARTBEAT_FAILS = 2;
 
   readonly isHolder = computed(() => {
     const lock = this.lock();
@@ -179,12 +183,24 @@ export class LayoutEditorStore {
 
   startHeartbeat(): void {
     this.stopHeartbeat();
+    this.heartbeatFailCount.set(0);
     this.heartbeatSub = this.yardMap.heartbeat$().subscribe({
-      next: lock => this.applyLock(lock),
+      next: lock => {
+        this.heartbeatFailCount.set(0);
+        this.lastHeartbeatSuccess.set(Date.now());
+        this.applyLock(lock);
+      },
       error: err => {
+        const failCount = this.heartbeatFailCount() + 1;
+        this.heartbeatFailCount.set(failCount);
         this.errors$.next({ action: 'heartbeat', error: err });
-        this.stopHeartbeat();
-        this.refreshLockStatus();
+        // TF-16 — sau 2 lần fail liên tiếp (>120s không hồi phục) rời holding
+        if (failCount >= this.MAX_HEARTBEAT_FAILS) {
+          this.stopHeartbeat();
+          this.errors$.next({ action: 'heartbeatLost', error: err });
+          this.state.set('readOnlyLocked');
+          this.refreshLockStatus();
+        }
       },
     });
   }

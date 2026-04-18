@@ -7,7 +7,8 @@ import {
   ContainerVisitHistory, InboundContainerRequest, OutboundContainerRequest,
   RelocateContainerRequest, ContainerVisit, ContainerMovement, DeliveryOrder,
   CreateDeliveryOrderRequest, EligibleContainer, DepotDashboard,
-  YardMapOverview, YardMapBlockDetail, YardMapHeatmapCell, YardBlockType
+  YardMapOverview, YardMapBlockDetail, YardMapHeatmapCell, YardBlockType,
+  StackStateDto,
 } from '../models/depot.models';
 
 @Injectable({ providedIn: 'root' })
@@ -81,6 +82,12 @@ export class DepotService {
   /** DEC-010 — Manager-only. Promotes an extension block to core (one-way). */
   promoteBlockToCore(id: number): Observable<YardBlock> {
     return this.http.post<YardBlock>(`${this.baseUrl}/yard-blocks/${id}/promote-core`, {});
+  }
+
+  /** EP-YBSTACK-01 — returns occupancy of every tier at a given bay/row slot. */
+  getBlockStackState(blockId: number, bay: number, row: number): Observable<StackStateDto> {
+    const params = new HttpParams().set('bay', bay.toString()).set('row', row.toString());
+    return this.http.get<StackStateDto>(`${this.baseUrl}/yard-blocks/${blockId}/stack-state`, { params });
   }
 
   // ── Containers ──

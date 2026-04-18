@@ -265,10 +265,10 @@
                     (onConfirm)="grantApproval()"
                     (onCancel)="dismissApproval()" />
 
-<!-- Revoke confirm -->
+<!-- Revoke confirm (TF-16 / BR-FE-LOCK-06) -->
 <app-confirm-dialog [open]="revokeConfirmOpen()"
                     [title]="'Revoke layout lock'"
-                    [message]="'Force-release the current layout lock? The holder will lose unsaved changes.'"
+                    [message]="'Revoke sẽ hủy changes chưa lưu của ' + (editor.lock()?.holderFullName ?? editor.lock()?.holderUserName ?? 'người đang giữ lock') + '. Xác nhận?'"
                     [confirmLabel]="'Revoke'"
                     [cancelLabel]="'Cancel'"
                     variant="danger"

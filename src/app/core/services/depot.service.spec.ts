@@ -189,6 +189,19 @@ describe('DepotService', () => {
     req.flush([]);
   });
 
+  // TF-02 / EP-YBSTACK-01: tier stack state query
+  it('getBlockStackState() should GET /api/yard-blocks/{id}/stack-state with bay+row params', () => {
+    let result: any = null;
+    service.getBlockStackState(5, 3, 2).subscribe(r => (result = r));
+    const req = httpMock.expectOne(r =>
+      r.url === '/api/yard-blocks/5/stack-state' && r.params.get('bay') === '3' && r.params.get('row') === '2'
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ bay: 3, row: 2, tiers: [{ tier: 1, occupied: true }, { tier: 2, occupied: false }] });
+    expect(result.tiers.length).toBe(2);
+    expect(result.tiers[0].occupied).toBeTrue();
+  });
+
   // TF-10 / DEC-010: promote extension block to core
   it('promoteBlockToCore() should POST /api/yard-blocks/{id}/promote-core', () => {
     let result: any = null;

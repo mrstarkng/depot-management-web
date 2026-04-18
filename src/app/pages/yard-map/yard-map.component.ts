@@ -216,6 +216,19 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
     this.eventsSub = this.yardMap.events$.subscribe(event => this.handleRealtime(event));
 
     this.editorErrSub = this.editor.errors$.subscribe(({ action, error }) => {
+      if (action === 'heartbeatLost') {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Mất kết nối lock',
+          detail: 'Heartbeat thất bại > 120s — layout editor chuyển sang chế độ read-only. Vui lòng kiểm tra kết nối và xin lock lại nếu cần.',
+          life: 6000,
+        });
+        return;
+      }
+      if (action === 'heartbeat') {
+        // Suppress transient heartbeat errors; the store tracks retries until heartbeatLost fires.
+        return;
+      }
       this.showError(action, error);
     });
 
