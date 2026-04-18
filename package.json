@@ -21,6 +21,7 @@
     "@angular/router": "^19.2.0",
     "@microsoft/signalr": "^10.0.0",
     "@primeng/themes": "^21.0.0",
+    "chart.js": "^4.5.1",
     "konva": "^10.2.5",
     "primeflex": "^4.0.0",
     "primeicons": "^7.0.0",

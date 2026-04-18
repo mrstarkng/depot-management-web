@@ -8,7 +8,7 @@ import {
   RelocateContainerRequest, ContainerVisit, ContainerMovement, DeliveryOrder,
   CreateDeliveryOrderRequest, EligibleContainer, DepotDashboard,
   YardMapOverview, YardMapBlockDetail, YardMapHeatmapCell, YardBlockType,
-  StackStateDto,
+  StackStateDto, ThroughputEntry, StockByOperatorEntry,
 } from '../models/depot.models';
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +20,20 @@ export class DepotService {
   // ── Dashboard ──
   getDashboard(): Observable<DepotDashboard> {
     return this.http.get<DepotDashboard>(`${this.baseUrl}/dashboard`);
+  }
+
+  /** SSC §5.4 — Inbound/outbound count per day per LineOperator. */
+  getThroughput(from: Date, to: Date): Observable<ThroughputEntry[]> {
+    const params = new HttpParams()
+      .set('from', toIsoDate(from))
+      .set('to', toIsoDate(to))
+      .set('groupBy', 'line-operator');
+    return this.http.get<ThroughputEntry[]>(`${this.baseUrl}/dashboard/throughput`, { params });
+  }
+
+  /** SSC §5.2 — Fresh vs long-stay container count per LineOperator. */
+  getStockByOperator(): Observable<StockByOperatorEntry[]> {
+    return this.http.get<StockByOperatorEntry[]>(`${this.baseUrl}/dashboard/stock-by-operator`);
   }
 
   // ── Line Operators ──
@@ -275,4 +289,11 @@ export class DepotService {
       ? bayCount * rowCount * tierCount
       : undefined;
   }
+}
+
+function toIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }

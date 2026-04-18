@@ -189,6 +189,27 @@ describe('DepotService', () => {
     req.flush([]);
   });
 
+  // TF-06 / SSC §5.4: throughput
+  it('getThroughput() should GET /api/dashboard/throughput with ISO date range + groupBy', () => {
+    service.getThroughput(new Date(2026, 3, 10), new Date(2026, 3, 16)).subscribe();
+    const req = httpMock.expectOne(r =>
+      r.url === '/api/dashboard/throughput'
+      && r.params.get('from') === '2026-04-10'
+      && r.params.get('to') === '2026-04-16'
+      && r.params.get('groupBy') === 'line-operator'
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
+  // TF-06 / SSC §5.2: stock by operator
+  it('getStockByOperator() should GET /api/dashboard/stock-by-operator', () => {
+    service.getStockByOperator().subscribe();
+    const req = httpMock.expectOne('/api/dashboard/stock-by-operator');
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+  });
+
   // TF-02 / EP-YBSTACK-01: tier stack state query
   it('getBlockStackState() should GET /api/yard-blocks/{id}/stack-state with bay+row params', () => {
     let result: any = null;

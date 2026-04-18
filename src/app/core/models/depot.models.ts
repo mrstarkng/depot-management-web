@@ -325,6 +325,20 @@ export interface ExpiringSoonOrder {
   remainingContainers: number;
 }
 
+// ── SSC Analytics (TF-06 / §9.4) ──
+export interface ThroughputEntry {
+  date: string;
+  lineOperatorCode: string;
+  inboundCount: number;
+  outboundCount: number;
+}
+
+export interface StockByOperatorEntry {
+  lineOperatorCode: string;
+  freshCount: number;
+  longStayCount: number;
+}
+
 export interface DepotDashboard {
   totalBlocks: number;
   totalContainers: number;
