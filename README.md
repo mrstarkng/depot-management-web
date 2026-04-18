@@ -1,62 +1,90 @@
 # Depot Management Web
 
-Intern capstone project: Hệ thống quản lý depot cho SNP - Frontend built with Angular 19 + PrimeNG.
+Frontend for the **Depot Container Management** capstone project (SNP). Built with **Angular 19** (standalone components + signals), **PrimeNG 19** (Aura theme), **Tailwind CSS v4**, **Konva 10** for the Yard Map canvas, and **SignalR** for realtime updates.
 
-## Architecture
+![CI](https://github.com/mrstarkng/depot-management-web/actions/workflows/ci.yml/badge.svg)
 
-```
-src/app/
-  core/
-    guards/          # Route guards (auth)
-    interceptors/    # HTTP interceptors (auth token)
-    models/          # TypeScript interfaces matching backend entities
-    services/        # API client services
-  pages/
-    dashboard/       # Overview with summary cards
-    yard-blocks/     # Yard block CRUD
-    containers/      # Container master CRUD + detail view
-    delivery-orders/ # Delivery order CRUD + detail view
-    lifecycle/       # Gate in/out and relocate operations
-```
+---
 
-## Domain Modules
+## Quickstart
 
-| Page | Backend API |
-|------|-------------|
-| Dashboard | Summary aggregation |
-| Yard Blocks | `/api/yard-blocks` |
-| Containers | `/api/containers` |
-| Gate In/Out | `/api/container-lifecycle` |
-| Delivery Orders | `/api/delivery-orders` |
-
-## Getting Started
-
-### Prerequisites
-- Node.js 20+
-- npm 10+
-
-### Install & Run
 ```bash
 npm install
-npm start
+npm start          # dev server at http://localhost:4200
 ```
-App runs at `http://localhost:4200`. API requests are proxied to `http://localhost:5000` via `proxy.conf.json`.
 
-### Build for Production
+The dev server proxies `/api/*` and `/hubs/*` to the backend at `http://localhost:5067` (see `proxy.conf.json`).
+
+### Production build
+
 ```bash
 npm run build
 ```
 
-### Run with Docker
+### Unit tests
+
+```bash
+npm test -- --watch=false --browsers=ChromeHeadless
+```
+
+### Docker
+
 ```bash
 docker build -t depot-management-web .
 docker run -p 80:80 depot-management-web
 ```
 
-## Tech Stack
+---
 
-- **Framework**: Angular 19 (standalone components, signals)
-- **UI Library**: PrimeNG 19 + PrimeFlex + PrimeIcons
-- **Theme**: Aura (dark mode supported)
-- **HTTP**: HttpClient with functional interceptors
-- **Routing**: Lazy-loaded standalone components
+## Architecture
+
+```
+src/app/
+├── core/
+│   ├── guards/          # authGuard, guestGuard, role guards (yardAccess, orderAccess, managerAccess, …)
+│   ├── interceptors/    # authInterceptor (JWT + 401 refresh), mockApiInterceptor (dev-only)
+│   ├── models/          # TypeScript interfaces matching backend DTOs
+│   ├── services/        # AuthService, DepotService, UsersService, YardMapService (REST + SignalR)
+│   └── components/      # Shared UI: StatusBadge, SlideOver, ConfirmDialog, Pagination, SectionDivider
+└── pages/
+    ├── auth/            # Login
+    ├── dashboard/       # KPI cards, recent activity, expiring orders
+    ├── yard-blocks/     # Block CRUD (Physical / Virtual; Category dropdown per DEC-009)
+    ├── containers/      # Container master CRUD + detail (visit history, current location)
+    ├── operations/      # 4 tabs: Gate-In, Gate-Out, In Depot, Relocate (Reactive Forms validators)
+    ├── delivery-orders/ # DO list + detail (eligible containers, release history)
+    ├── yard-map/        # Konva canvas + drill-in + Layout Editor (DEC-009)
+    ├── customers/       # Reference data
+    ├── line-operators/  # Reference data
+    └── users/           # User management (Manager only)
+```
+
+---
+
+## Role matrix (DEC-007)
+
+| Capability | GateOperator | YardPlanner | OrderClerk | Manager |
+|---|:-:|:-:|:-:|:-:|
+| Dashboard | ✓ | ✓ | ✓ | ✓ |
+| Yard Blocks CRUD | — | ✓ | — | ✓ |
+| Containers CRUD | — | ✓ | — | ✓ |
+| Operations (Gate-In/Out) | ✓ | — | — | ✓ |
+| Operations (Relocate) | — | ✓ | — | ✓ |
+| Delivery Orders | — | — | ✓ | ✓ |
+| Customers / Line Operators | — | — | ✓ | ✓ |
+| Yard Map view | ✓ | ✓ | ✓ | ✓ |
+| Yard Map Layout Editor | — | ✓ (requires Manager grant) | — | ✓ |
+| User Management | — | — | — | ✓ |
+
+---
+
+## Contributing
+
+- Every PR runs `npm ci && npm run build && npm test` via GitHub Actions. Keep it green.
+- Follow the `.editorconfig` (LF, 2-space indent, UTF-8).
+- No `--no-verify` commits, no new npm packages without a documented reason.
+- See `.github/PULL_REQUEST_TEMPLATE.md` for the PR checklist.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).

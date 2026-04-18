@@ -26,6 +26,17 @@ Thumbs.db
 
 # Misc
 *.tgz
+*.log
+*.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+
+# Editor history
+.history/
+.ionide/
+
+# Private docs — keep locally, do not publish
+/docs/
+/DEV_*.md
