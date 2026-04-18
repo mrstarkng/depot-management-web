@@ -78,6 +78,11 @@ export class DepotService {
     return this.http.delete<void>(`${this.baseUrl}/yard-blocks/${id}`);
   }
 
+  /** DEC-010 — Manager-only. Promotes an extension block to core (one-way). */
+  promoteBlockToCore(id: number): Observable<YardBlock> {
+    return this.http.post<YardBlock>(`${this.baseUrl}/yard-blocks/${id}/promote-core`, {});
+  }
+
   // ── Containers ──
   getContainers(query?: {
     search?: string;

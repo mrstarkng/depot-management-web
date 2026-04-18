@@ -243,6 +243,7 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!snapshot) return;
       const block = snapshot.blocks.find(b => b.blockCode === ev.blockCode);
       if (!block) return;
+      if (block.isCore) return; // DEC-010 — core block vị trí không đổi được
       block.canvasX = ev.canvasX;
       block.canvasY = ev.canvasY;
       this.overview.set({ ...snapshot });
@@ -324,15 +325,22 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!block) return;
     if (!this.editor.isHolder()) return;
 
-    const patch: Partial<YardMapBlock> = {
-      category: this.inspectorDraft.category,
-      rotation: this.inspectorDraft.rotation,
-      canvasWidth: Math.max(1, Number(this.inspectorDraft.canvasWidth) || 1),
-      canvasHeight: Math.max(1, Number(this.inspectorDraft.canvasHeight) || 1),
-      colorOverride: this.inspectorDraft.colorOverride?.trim()
-        ? this.inspectorDraft.colorOverride.trim()
-        : null,
-    };
+    // DEC-010: Core block chỉ được đổi Category + ColorOverride.
+    const normalizedColor = this.inspectorDraft.colorOverride?.trim()
+      ? this.inspectorDraft.colorOverride.trim()
+      : null;
+    const patch: Partial<YardMapBlock> = block.isCore
+      ? {
+          category: this.inspectorDraft.category,
+          colorOverride: normalizedColor,
+        }
+      : {
+          category: this.inspectorDraft.category,
+          rotation: this.inspectorDraft.rotation,
+          canvasWidth: Math.max(1, Number(this.inspectorDraft.canvasWidth) || 1),
+          canvasHeight: Math.max(1, Number(this.inspectorDraft.canvasHeight) || 1),
+          colorOverride: normalizedColor,
+        };
 
     // Mutate overview snapshot so Konva re-renders
     Object.assign(block, patch);

@@ -188,4 +188,15 @@ describe('DepotService', () => {
     expect(req.request.method).toBe('GET');
     req.flush([]);
   });
+
+  // TF-10 / DEC-010: promote extension block to core
+  it('promoteBlockToCore() should POST /api/yard-blocks/{id}/promote-core', () => {
+    let result: any = null;
+    service.promoteBlockToCore(42).subscribe(r => (result = r));
+    const req = httpMock.expectOne('/api/yard-blocks/42/promote-core');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    req.flush({ id: 42, code: 'X1', name: 'X1', blockType: 'Physical', isCore: true, isActive: true, activeContainerCount: 0 });
+    expect(result.isCore).toBeTrue();
+  });
 });

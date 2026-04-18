@@ -145,11 +145,24 @@
                 [title]="'Block ' + selectedBlockCode()"
                 (onClose)="closeDrilldown()">
   <div class="space-y-3">
-    @if (editor.isHolder() && selectedBlock()) {
-      <div class="border border-[#0275D8] bg-[#EFF8FF] rounded p-3 space-y-3">
-        <div class="text-[12px] font-semibold text-[#0275D8]">
-          <i class="pi pi-pencil mr-1"></i>Edit block
+    @if (editor.isHolder() && selectedBlock(); as blk) {
+      <div class="rounded p-3 space-y-3"
+           [class.border]="true"
+           [class.border-[#0275D8]]="!blk.isCore"
+           [class.bg-[#EFF8FF]]="!blk.isCore"
+           [class.border-[#FFE0B2]]="blk.isCore"
+           [class.bg-[#FFF3E0]]="blk.isCore">
+        <div class="text-[12px] font-semibold flex items-center gap-2"
+             [class.text-[#0275D8]]="!blk.isCore"
+             [class.text-[#7C4A03]]="blk.isCore">
+          <i class="pi" [class.pi-pencil]="!blk.isCore" [class.pi-lock]="blk.isCore"></i>
+          {{ blk.isCore ? 'Core block — chỉ đổi công năng' : 'Edit block' }}
         </div>
+        @if (blk.isCore) {
+          <div class="text-[11px] text-[#7C4A03] leading-relaxed">
+            Chỉ <strong>Category</strong> và <strong>Color override</strong> được chỉnh. Rotation / Width / Height / vị trí bị khoá (DEC-010).
+          </div>
+        }
         <div class="grid grid-cols-2 gap-2 text-[12px]">
           <label class="flex flex-col gap-1">
             <span class="text-[#555]">Category</span>
@@ -162,8 +175,8 @@
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-[#555]">Rotation</span>
-            <select [(ngModel)]="inspectorDraft.rotation"
-                    class="border border-[#CCC] rounded px-2 py-1 text-[12px] bg-white">
+            <select [(ngModel)]="inspectorDraft.rotation" [disabled]="blk.isCore === true"
+                    class="border border-[#CCC] rounded px-2 py-1 text-[12px] bg-white disabled:bg-[#F5F5F5]">
               @for (deg of rotationOptions; track deg) {
                 <option [ngValue]="deg">{{ deg }}°</option>
               }
@@ -171,13 +184,13 @@
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-[#555]">Width (units)</span>
-            <input type="number" min="1" [(ngModel)]="inspectorDraft.canvasWidth"
-                   class="border border-[#CCC] rounded px-2 py-1 text-[12px]">
+            <input type="number" min="1" [(ngModel)]="inspectorDraft.canvasWidth" [disabled]="blk.isCore === true"
+                   class="border border-[#CCC] rounded px-2 py-1 text-[12px] disabled:bg-[#F5F5F5]">
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-[#555]">Height (units)</span>
-            <input type="number" min="1" [(ngModel)]="inspectorDraft.canvasHeight"
-                   class="border border-[#CCC] rounded px-2 py-1 text-[12px]">
+            <input type="number" min="1" [(ngModel)]="inspectorDraft.canvasHeight" [disabled]="blk.isCore === true"
+                   class="border border-[#CCC] rounded px-2 py-1 text-[12px] disabled:bg-[#F5F5F5]">
           </label>
           <label class="flex flex-col gap-1 col-span-2">
             <span class="text-[#555]">Color override (optional hex, e.g. #2196F3)</span>

@@ -37,10 +37,16 @@ export class YardBlocksComponent implements OnInit {
   slideOpen = false;
   editMode = false;
   editId = 0;
+  editIsCore = false;
   saving = false;
   form: CreateYardBlockRequest = { code: '', name: '', blockType: YardBlockType.Physical, category: YardBlockCategory.Standard };
 
   readonly allCategories = Object.values(YardBlockCategory);
+
+  // TF-10 — Promote extension block → core
+  promoting = false;
+  promoteConfirmOpen = false;
+  promoteTarget: YardBlock | null = null;
 
   // Menu
   openMenuId: number | null = null;
@@ -114,6 +120,7 @@ export class YardBlocksComponent implements OnInit {
     this.form = { code: '', name: '', blockType: YardBlockType.Physical, category: YardBlockCategory.Standard };
     this.editMode = false;
     this.editId = 0;
+    this.editIsCore = false;
     this.slideOpen = true;
   }
 
@@ -122,7 +129,7 @@ export class YardBlocksComponent implements OnInit {
       code: block.code,
       name: block.name,
       blockType: block.blockType as YardBlockType,
-      category: (block as any).category ?? YardBlockCategory.Standard,
+      category: block.category ?? YardBlockCategory.Standard,
       bayCount: block.bayCount,
       rowCount: block.rowCount,
       tierCount: block.tierCount,
@@ -130,6 +137,7 @@ export class YardBlocksComponent implements OnInit {
     };
     this.editMode = true;
     this.editId = block.id;
+    this.editIsCore = !!block.isCore;
     this.slideOpen = true;
     this.openMenuId = null;
   }
@@ -202,5 +210,47 @@ export class YardBlocksComponent implements OnInit {
   toggleMenu(id: number, event: Event) {
     event.stopPropagation();
     this.openMenuId = this.openMenuId === id ? null : id;
+  }
+
+  // ── TF-10 Promote to Core (Manager only) ────────────────────────────────
+  openPromoteConfirm(block: YardBlock) {
+    this.promoteTarget = block;
+    this.promoteConfirmOpen = true;
+    this.openMenuId = null;
+  }
+
+  cancelPromote() {
+    this.promoteConfirmOpen = false;
+    this.promoteTarget = null;
+  }
+
+  confirmPromote() {
+    const target = this.promoteTarget;
+    this.promoteConfirmOpen = false;
+    if (!target || this.promoting) return;
+    this.promoting = true;
+    this.depotService.promoteBlockToCore(target.id).subscribe({
+      next: () => {
+        this.promoting = false;
+        this.promoteTarget = null;
+        this.load();
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Đã promote',
+          detail: `Block ${target.code} giờ là Core block.`,
+          life: 3500,
+        });
+      },
+      error: (err) => {
+        this.promoting = false;
+        this.promoteTarget = null;
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Promote thất bại',
+          detail: err.error?.Message || err.error?.message || 'Operation failed',
+          life: 5000,
+        });
+      },
+    });
   }
 }

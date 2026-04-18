@@ -47,7 +47,26 @@ describe('YardMapService', () => {
     expect(overview.revision).toBe('rev-1');
     expect(overview.blocks[0].category).toBe('Reefer');
     expect(overview.blocks[0].canvasWidth).toBe(10);
+    expect(overview.blocks[0].isCore).toBeFalse();
     expect(overview.facilities.length).toBe(1);
+  });
+
+  it('mapBlock propagates isCore=true flag from backend', () => {
+    let overview: any = null;
+    service.getOverview().subscribe(o => (overview = o));
+    httpMock.expectOne('/api/yard-map').flush({
+      generatedAt: 't', revision: 'r',
+      blocks: [{
+        id: 1, code: 'A1', name: 'A1',
+        bayCount: 10, rowCount: 6, tierCount: 4,
+        occupiedSlots: 0, positionedContainers: 0, unpositionedContainers: 0,
+        availableSlots: 240, occupancyPercentage: 0,
+        canvasX: 0, canvasY: 0, canvasWidth: 10, canvasHeight: 6, rotation: 0,
+        category: 'Standard', isCore: true,
+      }],
+      facilities: [],
+    });
+    expect(overview.blocks[0].isCore).toBeTrue();
   });
 
   it('GET /api/yard-map/{code} maps block detail with slots', () => {

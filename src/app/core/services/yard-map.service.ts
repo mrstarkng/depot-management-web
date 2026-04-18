@@ -52,6 +52,7 @@ interface YardMapBlockApi {
   canvasHeight?: number;
   rotation?: number;
   rowVersion?: string | null;
+  isCore?: boolean;
 }
 
 interface YardMapFacilityApi {
@@ -288,6 +289,7 @@ export class YardMapService {
       category: this.normalizeCategory(block.category),
       colorOverride: block.colorOverride ?? null,
       rowVersion: block.rowVersion ?? null,
+      isCore: block.isCore ?? false,
     };
   }
 

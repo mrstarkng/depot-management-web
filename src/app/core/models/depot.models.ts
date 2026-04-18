@@ -62,8 +62,11 @@ export interface YardBlock {
   tierCount?: number;
   maxCapacity?: number;
   isActive: boolean;
+  /** DEC-010 — true for seeded "core" blocks that cannot be structurally changed. */
+  isCore: boolean;
   description?: string;
   activeContainerCount: number;
+  category?: YardBlockCategory;
 }
 
 export interface CreateYardBlockRequest {
@@ -389,6 +392,8 @@ export interface YardMapBlock {
   category: YardBlockCategory;
   colorOverride?: string | null;
   rowVersion?: string | null;
+  /** DEC-010 — true when backend flags this block as "core" (seeded, immutable structure). */
+  isCore?: boolean;
 }
 
 export interface YardMapFacility {

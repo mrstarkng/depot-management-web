@@ -242,25 +242,42 @@ export class KonvaYardMap {
       dimmed,
     });
 
+    // DEC-010 — core block: không cho drag, vẽ dashed border để phân biệt visual.
+    const isCore = block.isCore === true;
     const group = new Konva.Group({
       x: block.canvasX * UNIT_PX,
       y: block.canvasY * UNIT_PX,
       rotation: block.rotation ?? 0,
-      draggable: this.editable,
+      draggable: this.editable && !isCore,
     });
 
+    const selected = this.selectedBlockCode === block.blockCode;
+    const dashPattern: number[] | undefined =
+      resolved.dashed || isCore ? [6, 4] : undefined;
     const rect = new Konva.Rect({
       x: 0,
       y: 0,
       width,
       height,
       fill: resolved.fill,
-      stroke: this.selectedBlockCode === block.blockCode ? '#1A73E8' : resolved.stroke,
-      strokeWidth: this.selectedBlockCode === block.blockCode ? 3 : 1.5,
+      stroke: selected ? '#1A73E8' : (isCore ? '#E65100' : resolved.stroke),
+      strokeWidth: selected ? 3 : (isCore ? 2 : 1.5),
       cornerRadius: 2,
-      dash: resolved.dashed ? [6, 4] : undefined,
+      dash: dashPattern,
     });
     group.add(rect);
+
+    if (isCore) {
+      // Small "CORE" label in top-right — complements the dashed orange border.
+      group.add(new Konva.Text({
+        x: Math.max(0, width - 40),
+        y: 4,
+        text: 'CORE',
+        fontSize: 9,
+        fontStyle: 'bold',
+        fill: '#E65100',
+      }));
+    }
 
     group.add(new Konva.Text({
       x: 6,

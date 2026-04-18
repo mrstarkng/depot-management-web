@@ -57,7 +57,17 @@
     <tbody>
       @for (block of paginated; track block.id) {
         <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
-          <td class="px-3 py-2.5 font-medium text-[#333]">{{ block.code }}</td>
+          <td class="px-3 py-2.5 font-medium text-[#333]">
+            <span class="inline-flex items-center gap-1.5">
+              {{ block.code }}
+              @if (block.isCore) {
+                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#FFF3E0] text-[#E65100] border border-[#FFE0B2]"
+                      title="Core block — cấu trúc không thể chỉnh sửa (DEC-010)">
+                  <i class="pi pi-lock text-[9px]"></i>Core
+                </span>
+              }
+            </span>
+          </td>
           <td class="px-3 py-2.5"><app-status-badge [status]="$any(block.blockType)" /></td>
           <td class="px-3 py-2.5">{{ block.blockType === 'Physical' ? block.bayCount : '—' }}</td>
           <td class="px-3 py-2.5">{{ block.blockType === 'Physical' ? block.rowCount : '—' }}</td>
@@ -74,7 +84,7 @@
                 <i class="pi pi-ellipsis-v text-[12px]"></i>
               </button>
               @if (openMenuId === block.id) {
-                <div class="absolute right-3 top-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg z-20 py-1 min-w-[150px]">
+                <div class="absolute right-3 top-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg z-20 py-1 min-w-[180px]">
                   <button (click)="openEdit(block)" class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-[#F5F5F5]">
                     <i class="pi pi-pencil mr-2 text-[12px]"></i>Edit
                   </button>
@@ -83,9 +93,16 @@
                       <i class="pi pi-map mr-2 text-[12px]"></i>View on Map
                     </a>
                   }
-                  <button (click)="confirmDelete(block)" class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-[#F5F5F5] text-[#D9534F]">
-                    <i class="pi pi-trash mr-2 text-[12px]"></i>Delete
-                  </button>
+                  @if (!block.isCore && authService.isManager()) {
+                    <button (click)="openPromoteConfirm(block)" class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-[#F5F5F5] text-[#E65100]">
+                      <i class="pi pi-lock mr-2 text-[12px]"></i>Promote to Core
+                    </button>
+                  }
+                  @if (!block.isCore) {
+                    <button (click)="confirmDelete(block)" class="w-full text-left px-3 py-1.5 text-[13px] hover:bg-[#F5F5F5] text-[#D9534F]">
+                      <i class="pi pi-trash mr-2 text-[12px]"></i>Delete
+                    </button>
+                  }
                 </div>
               }
             }
@@ -105,6 +122,18 @@
 <!-- Create/Edit Slide-Over -->
 <app-slide-over [open]="slideOpen" [title]="editMode ? 'Edit Yard Block: ' + form.code : 'New Yard Block'" (onClose)="slideOpen = false">
   <div class="space-y-3">
+    @if (editMode && editIsCore) {
+      <div class="flex items-start gap-2 p-3 rounded border border-[#FFE0B2] bg-[#FFF3E0] text-[#7C4A03] text-[12px]">
+        <i class="pi pi-lock mt-0.5"></i>
+        <div>
+          <div class="font-semibold">Core block — chỉ đổi được công năng</div>
+          <div class="mt-0.5">
+            Chỉ <strong>Category, Color Override, Name, Description, Max Capacity</strong> có thể chỉnh. Code, Block Type, Bay/Row/Tier không thay đổi; Delete bị vô hiệu (DEC-010).
+          </div>
+        </div>
+      </div>
+    }
+
     <app-section-divider label="Identification" />
     <div>
       <label class="block text-[12px] font-medium text-[#555] mb-1">Code <span class="text-[#D9534F]">*</span></label>
@@ -117,7 +146,8 @@
     </div>
     <div>
       <label class="block text-[12px] font-medium text-[#555] mb-1">Block Type <span class="text-[#D9534F]">*</span></label>
-      <select [(ngModel)]="form.blockType" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+      <select [(ngModel)]="form.blockType" [disabled]="editMode && editIsCore"
+              class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white disabled:bg-[#F5F5F5]">
         <option value="Physical">Physical</option>
         <option value="Virtual">Virtual</option>
       </select>
@@ -139,15 +169,18 @@
       <div class="grid grid-cols-3 gap-3">
         <div>
           <label class="block text-[12px] font-medium text-[#555] mb-1">Bay Count</label>
-          <input type="number" [(ngModel)]="form.bayCount" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+          <input type="number" [(ngModel)]="form.bayCount" min="1" [disabled]="editMode && editIsCore"
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] disabled:bg-[#F5F5F5]">
         </div>
         <div>
           <label class="block text-[12px] font-medium text-[#555] mb-1">Row Count</label>
-          <input type="number" [(ngModel)]="form.rowCount" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+          <input type="number" [(ngModel)]="form.rowCount" min="1" [disabled]="editMode && editIsCore"
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] disabled:bg-[#F5F5F5]">
         </div>
         <div>
           <label class="block text-[12px] font-medium text-[#555] mb-1">Tier Count</label>
-          <input type="number" [(ngModel)]="form.tierCount" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+          <input type="number" [(ngModel)]="form.tierCount" min="1" [disabled]="editMode && editIsCore"
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] disabled:bg-[#F5F5F5]">
         </div>
       </div>
       @if (computedCapacity) {
@@ -177,5 +210,15 @@
 <!-- Confirm Dialog -->
 <app-confirm-dialog [open]="confirmOpen" [title]="confirmTitle" [message]="confirmMessage" [variant]="confirmVariant"
                     (onConfirm)="onConfirm()" (onCancel)="onCancelConfirm()" />
+
+<!-- Promote-to-Core Confirm Dialog (DEC-010) -->
+<app-confirm-dialog [open]="promoteConfirmOpen"
+                    [title]="'Promote to Core?'"
+                    [message]="'Block ' + (promoteTarget?.code ?? '') + ' sẽ trở thành Core block. Đây là hành động MỘT CHIỀU — không thể promote lại sau khi chuyển. Tiếp tục?'"
+                    [confirmLabel]="'Promote'"
+                    [cancelLabel]="'Cancel'"
+                    variant="warning"
+                    (onConfirm)="confirmPromote()"
+                    (onCancel)="cancelPromote()" />
 
 <p-toast position="top-right" />
