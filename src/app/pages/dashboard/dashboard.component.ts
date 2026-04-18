@@ -282,6 +282,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const totalOccupied = summary.blockOccupancies.reduce((sum, block) => sum + block.activeContainers, 0);
     const yardOccupancyPercent = totalCapacity ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
 
+    // TF-11 — Recent Activity: 10 gần nhất, cắt cửa sổ 24h.
+    const dayAgoMs = Date.now() - 24 * 60 * 60 * 1000;
     const recentActivity = visits
       .flatMap(visit => {
         const operatorName = operatorNameByCode.get(visit.lineOperatorCode) ?? visit.lineOperatorCode;
@@ -302,25 +304,37 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }] : []),
         ];
       })
+      .filter(item => item.time && new Date(item.time).getTime() >= dayAgoMs)
       .sort((left, right) => new Date(right.time).getTime() - new Date(left.time).getTime())
-      .slice(0, 20);
+      .slice(0, 10);
 
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 7);
-
+    // TF-11 — Expiring Orders: cửa sổ 3 ngày + severity theo khoảng cách.
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const twoDaysMs = 2 * oneDayMs;
+    const nowMs = Date.now();
+    const threshold = nowMs + threeDaysMs;
     const expiringSoonOrders = orders
       .filter(order => {
-        const expiry = new Date(order.orderExpiryDate);
-        return !order.isExpired && order.hasRemainingQuantity && expiry <= nextWeek;
+        const expiryMs = new Date(order.orderExpiryDate).getTime();
+        return !order.isExpired && order.hasRemainingQuantity && expiryMs <= threshold;
       })
       .sort((left, right) => new Date(left.orderExpiryDate).getTime() - new Date(right.orderExpiryDate).getTime())
       .slice(0, 10)
-      .map(order => ({
-        orderNumber: order.orderNumber,
-        operatorName: order.lineOperatorName,
-        expiryDate: order.orderExpiryDate,
-        remainingContainers: order.totalRemainingQuantity,
-      }));
+      .map(order => {
+        const remainingMs = new Date(order.orderExpiryDate).getTime() - nowMs;
+        let severity: 'danger' | 'warn' | 'info';
+        if (remainingMs < oneDayMs) severity = 'danger';
+        else if (remainingMs < twoDaysMs) severity = 'warn';
+        else severity = 'info';
+        return {
+          orderNumber: order.orderNumber,
+          operatorName: order.lineOperatorName,
+          expiryDate: order.orderExpiryDate,
+          remainingContainers: order.totalRemainingQuantity,
+          severity,
+        };
+      });
 
     return {
       ...summary,

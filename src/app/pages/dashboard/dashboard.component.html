@@ -152,7 +152,7 @@
     <div class="bg-white border border-[#E0E0E0] rounded">
       <div class="px-4 py-3 border-b border-[#F0F0F0]">
         <h2 class="text-[13px] font-semibold text-[#333]">Expiring Soon</h2>
-        <div class="text-[11px] text-[#888]">Orders expiring within 7 days</div>
+        <div class="text-[11px] text-[#888]">Orders expiring within 3 days</div>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full text-[12px]">
@@ -167,12 +167,21 @@
           <tbody>
             @if (dashboard.expiringSoonOrders && dashboard.expiringSoonOrders.length) {
               @for (o of dashboard.expiringSoonOrders; track o.orderNumber) {
-                <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
+                <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]"
+                    [class.bg-[#FDF2F2]]="o.severity === 'danger'"
+                    [class.bg-[#FCF8E3]]="o.severity === 'warn'">
                   <td class="px-3 py-2 font-medium">
                     <a [routerLink]="'/delivery-orders/' + o.orderNumber" class="text-[#0275D8] hover:underline">{{ o.orderNumber }}</a>
                   </td>
                   <td class="px-3 py-2">{{ o.operatorName }}</td>
-                  <td class="px-3 py-2 text-[#D9534F] font-medium">{{ o.expiryDate | date:'MM/dd' }}</td>
+                  <td class="px-3 py-2 font-medium"
+                      [class.text-[#D9534F]]="o.severity === 'danger'"
+                      [class.text-[#8A6D3B]]="o.severity === 'warn'"
+                      [class.text-[#555]]="o.severity === 'info' || !o.severity">
+                    {{ o.expiryDate | date:'MM/dd' }}
+                    @if (o.severity === 'danger') { <span class="ml-1 text-[10px] uppercase">&lt; 1 ngày</span> }
+                    @else if (o.severity === 'warn') { <span class="ml-1 text-[10px] uppercase">1–2 ngày</span> }
+                  </td>
                   <td class="px-3 py-2">{{ o.remainingContainers }} containers</td>
                 </tr>
               }

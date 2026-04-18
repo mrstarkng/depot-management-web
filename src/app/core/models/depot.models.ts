@@ -323,6 +323,8 @@ export interface ExpiringSoonOrder {
   operatorName: string;
   expiryDate: string;
   remainingContainers: number;
+  /** TF-11 — 'danger' < 1d, 'warn' < 2d, 'info' < 3d. Optional vì backend chưa trả. */
+  severity?: 'danger' | 'warn' | 'info';
 }
 
 // ── SSC Analytics (TF-06 / §9.4) ──

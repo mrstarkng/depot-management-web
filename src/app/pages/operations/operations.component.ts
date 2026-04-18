@@ -699,6 +699,22 @@ export class OperationsComponent implements OnInit {
     return [...new Set(this.inDepotVisits.map(v => v.yardBlockCode))].sort();
   }
 
+  // ── TF-05 — Block capacity helpers ───────────────────────────────────────
+  isBlockFull(block: YardBlock): boolean {
+    if (!block.maxCapacity) return false;
+    return block.activeContainerCount >= block.maxCapacity;
+  }
+
+  isBlockNearFull(block: YardBlock): boolean {
+    if (!block.maxCapacity) return false;
+    return block.activeContainerCount / block.maxCapacity >= 0.95 && !this.isBlockFull(block);
+  }
+
+  blockOccupancyPercent(block: YardBlock): number {
+    if (!block.maxCapacity) return 0;
+    return Math.round((block.activeContainerCount / block.maxCapacity) * 100);
+  }
+
   // ── Error helpers for templates (Vietnamese messages) ──────────────────────
   bayErrorText(control: AbstractControl | null): string {
     if (!control || !control.errors) return '';

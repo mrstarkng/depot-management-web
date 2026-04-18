@@ -40,3 +40,8 @@ pnpm-debug.log*
 # Private docs — keep locally, do not publish
 /docs/
 /DEV_*.md
+
+# Cypress artifacts
+/cypress/screenshots/
+/cypress/videos/
+/cypress/downloads/

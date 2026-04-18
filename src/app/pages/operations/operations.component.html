@@ -93,9 +93,16 @@
           <select [(ngModel)]="inForm.yardBlockId" (ngModelChange)="onInboundBlockChange()" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
             <option [value]="0" disabled>Select...</option>
             @for (b of yardBlocks; track b.id) {
-              <option [value]="b.id">{{ b.code }} ({{ b.blockType }})</option>
+              <option [value]="b.id" [disabled]="isBlockFull(b)">
+                {{ b.code }} ({{ b.blockType }}){{ isBlockFull(b) ? ' — FULL' : (isBlockNearFull(b) ? ' — sắp đầy' : '') }}
+              </option>
             }
           </select>
+          @if (selectedInboundBlock && isBlockNearFull(selectedInboundBlock) && !isBlockFull(selectedInboundBlock)) {
+            <div class="text-[11px] text-[#8A6D3B] mt-1">
+              <i class="pi pi-exclamation-triangle mr-1"></i>Block đang ở {{ blockOccupancyPercent(selectedInboundBlock) }}% — cân nhắc chọn block khác.
+            </div>
+          }
         </div>
       </div>
 

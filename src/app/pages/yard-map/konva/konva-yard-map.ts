@@ -279,6 +279,28 @@ export class KonvaYardMap {
       }));
     }
 
+    // TF-05 — capacity tint overlay: amber when ≥95%, red when full.
+    const ratio = block.maxCapacity && block.maxCapacity > 0
+      ? block.occupiedSlots / block.maxCapacity
+      : 0;
+    if (ratio >= 1) {
+      group.add(new Konva.Rect({
+        x: 0, y: 0, width, height,
+        fill: 'rgba(217, 83, 79, 0.28)',
+        listening: false,
+      }));
+      group.add(new Konva.Text({
+        x: Math.max(0, width / 2 - 16), y: Math.max(16, height / 2 - 6),
+        text: 'FULL', fontSize: 11, fontStyle: 'bold', fill: '#D9534F',
+      }));
+    } else if (ratio >= 0.95) {
+      group.add(new Konva.Rect({
+        x: 0, y: 0, width, height,
+        fill: 'rgba(240, 173, 78, 0.22)',
+        listening: false,
+      }));
+    }
+
     group.add(new Konva.Text({
       x: 6,
       y: 4,

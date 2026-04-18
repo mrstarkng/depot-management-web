@@ -211,6 +211,35 @@
       </div>
     }
 
+    @if (selectedBlock(); as blk) {
+      @if (blk.maxCapacity) {
+        <div class="flex items-center justify-between px-3 py-2 rounded border text-[12px]"
+             [class.border-[#F5C6CB]]="blk.occupiedSlots >= blk.maxCapacity"
+             [class.bg-[#FDF2F2]]="blk.occupiedSlots >= blk.maxCapacity"
+             [class.text-[#A94442]]="blk.occupiedSlots >= blk.maxCapacity"
+             [class.border-[#FAEBCC]]="blk.occupiedSlots < blk.maxCapacity && blk.occupiedSlots / blk.maxCapacity >= 0.95"
+             [class.bg-[#FCF8E3]]="blk.occupiedSlots < blk.maxCapacity && blk.occupiedSlots / blk.maxCapacity >= 0.95"
+             [class.text-[#8A6D3B]]="blk.occupiedSlots < blk.maxCapacity && blk.occupiedSlots / blk.maxCapacity >= 0.95"
+             [class.border-[#E0E0E0]]="blk.occupiedSlots / blk.maxCapacity < 0.95"
+             [class.bg-[#F5F5F5]]="blk.occupiedSlots / blk.maxCapacity < 0.95"
+             [class.text-[#555]]="blk.occupiedSlots / blk.maxCapacity < 0.95">
+          <span class="font-medium">
+            <i class="pi" [class.pi-ban]="blk.occupiedSlots >= blk.maxCapacity" [class.pi-exclamation-triangle]="blk.occupiedSlots < blk.maxCapacity && blk.occupiedSlots / blk.maxCapacity >= 0.95" [class.pi-info-circle]="blk.occupiedSlots / blk.maxCapacity < 0.95"></i>
+            Sức chứa: {{ blk.occupiedSlots }}/{{ blk.maxCapacity }}
+          </span>
+          <span>
+            @if (blk.occupiedSlots >= blk.maxCapacity) {
+              Block đã đầy — không thể gate-in thêm.
+            } @else if (blk.occupiedSlots / blk.maxCapacity >= 0.95) {
+              Sắp đầy ({{ (blk.occupiedSlots / blk.maxCapacity * 100) | number:'1.0-0' }}%).
+            } @else {
+              Còn {{ blk.maxCapacity - blk.occupiedSlots }} slot trống.
+            }
+          </span>
+        </div>
+      }
+    }
+
     @if (blockDetailSlots().length === 0) {
       <div class="text-[12px] text-[#888]">No positioned containers in this block.</div>
     }
