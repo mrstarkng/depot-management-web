@@ -126,10 +126,10 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
 
   readonly connectionLabel = computed(() => {
     switch (this.connectionState()) {
-      case 'connected': return 'Live';
-      case 'reconnecting': return 'Reconnecting';
-      case 'connecting': return 'Connecting';
-      default: return 'Disconnected';
+      case 'connected': return 'Đã kết nối';
+      case 'reconnecting': return 'Đang kết nối lại…';
+      case 'connecting': return 'Đang kết nối…';
+      default: return 'Mất kết nối';
     }
   });
 
@@ -197,10 +197,19 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
     this.searchDebounce$.pipe(debounceTime(250), takeUntil(this.destroyed$)).subscribe(term => this.applySearch(term));
 
     this.stateSub = this.yardMap.connectionState$.subscribe(state => {
+      const prev = this.connectionState();
       this.connectionState.set(state);
       if (state === 'connected') {
-        // Reseed lock state on (re)connect
+        // Always reseed lock state on (re)connect
         this.editor.refreshLockStatus();
+        // BR-FE-RT-02: after a reconnect, refresh snapshot to catch missed events
+        if (prev === 'reconnecting' || prev === 'disconnected') {
+          this.loadOverview();
+          this.messageService.add({
+            severity: 'success', summary: 'Đã kết nối lại',
+            detail: 'Tải lại dữ liệu mới nhất từ máy chủ.', life: 2500,
+          });
+        }
       }
     });
 

@@ -5,13 +5,19 @@
   <div class="flex items-center justify-between gap-3 flex-wrap">
     <h1 class="text-[20px] font-semibold text-[#333]">Yard Map</h1>
     <div class="flex items-center gap-3 text-[12px]">
-      <span class="flex items-center gap-1.5">
-        <span class="w-2.5 h-2.5 rounded-full"
-              [class.bg-[#3C763D]]="connectionState() === 'connected'"
-              [class.bg-[#F0AD4E]]="connectionState() === 'reconnecting' || connectionState() === 'connecting'"
-              [class.bg-[#D9534F]]="connectionState() === 'disconnected'"></span>
-        <span class="text-[#555]">{{ connectionLabel() }}</span>
-      </span>
+      @if (connectionState() === 'reconnecting' || connectionState() === 'connecting') {
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#FCF8E3] text-[#8A6D3B] text-[11px] font-medium">
+          <i class="pi pi-spin pi-spinner text-[10px]"></i>
+          {{ connectionLabel() }}
+        </span>
+      } @else {
+        <span class="flex items-center gap-1.5">
+          <span class="w-2.5 h-2.5 rounded-full"
+                [class.bg-[#3C763D]]="connectionState() === 'connected'"
+                [class.bg-[#D9534F]]="connectionState() === 'disconnected'"></span>
+          <span class="text-[#555]">{{ connectionLabel() }}</span>
+        </span>
+      }
       @if (readOnlyMode()) {
         <span class="px-2 py-0.5 rounded bg-[#F5F5F5] text-[#666] text-[11px]">Read-only</span>
       }

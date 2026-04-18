@@ -223,7 +223,7 @@ export class YardMapService {
       .withUrl(this.hubUrl, {
         accessTokenFactory: () => this.authService.getToken() ?? '',
       })
-      .withAutomaticReconnect()
+      .withAutomaticReconnect([0, 2000, 10000, 30000])
       .configureLogging(LogLevel.Warning)
       .build();
 
