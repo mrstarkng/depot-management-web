@@ -1,148 +1,257 @@
-<div class="mb-4">
+<p-toast position="top-right" />
+
+<div class="mb-3">
   <div class="text-[11px] text-[#888] mb-1">Home › Yard Map</div>
   <div class="flex items-center justify-between gap-3 flex-wrap">
     <h1 class="text-[20px] font-semibold text-[#333]">Yard Map</h1>
-    <div class="flex items-center gap-2 text-[12px]">
-      <span class="w-2.5 h-2.5 rounded-full" [class.bg-[#3C763D]]="connected()" [class.bg-[#D9534F]]="!connected()"></span>
-      <span class="text-[#666]">Live {{ connected() ? 'Connected' : 'Disconnected' }}</span>
+    <div class="flex items-center gap-3 text-[12px]">
+      <span class="flex items-center gap-1.5">
+        <span class="w-2.5 h-2.5 rounded-full"
+              [class.bg-[#3C763D]]="connectionState() === 'connected'"
+              [class.bg-[#F0AD4E]]="connectionState() === 'reconnecting' || connectionState() === 'connecting'"
+              [class.bg-[#D9534F]]="connectionState() === 'disconnected'"></span>
+        <span class="text-[#555]">{{ connectionLabel() }}</span>
+      </span>
       @if (readOnlyMode()) {
         <span class="px-2 py-0.5 rounded bg-[#F5F5F5] text-[#666] text-[11px]">Read-only</span>
+      }
+      @if (editor.lock()?.isActive) {
+        <span class="px-2 py-0.5 rounded text-[11px]"
+              [class.bg-[#DFF0D8]]="editor.isHolder()"
+              [class.text-[#3C763D]]="editor.isHolder()"
+              [class.bg-[#FCF8E3]]="!editor.isHolder()"
+              [class.text-[#8A6D3B]]="!editor.isHolder()">
+          {{ lockBanner().text }}
+        </span>
+      } @else {
+        <span class="px-2 py-0.5 rounded bg-[#E8F4FD] text-[#31708F] text-[11px]">Layout unlocked</span>
       }
     </div>
   </div>
 </div>
 
-<div class="bg-white border border-[#E0E0E0] rounded p-3 mb-4 flex flex-wrap gap-3 items-center">
-  <input [(ngModel)]="searchContainer" placeholder="Search container#..."
-         class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] w-[220px]">
+<!-- Toolbar -->
+<div class="bg-white border border-[#E0E0E0] rounded px-3 py-2 mb-3 flex flex-wrap items-center gap-2">
+  <input [ngModel]="searchInput()" (ngModelChange)="onSearchInput($event)"
+         placeholder="Search block/container #"
+         class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] w-[240px]">
 
-  <select [ngModel]="selectedBlockCode()" (ngModelChange)="selectedBlockCode.set($event)"
-          class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white min-w-[180px]">
-    <option value="">All blocks</option>
-    @for (b of blocks(); track b.blockCode) {
-      <option [value]="b.blockCode">{{ b.blockCode }} ({{ b.occupancyPercent }}%)</option>
-    }
-  </select>
-
-  <div class="flex items-center gap-1.5">
-    <button (click)="toggleHeatmap('off')"
+  <div class="flex items-center gap-1">
+    <button (click)="toggleOverlay('off')"
             class="px-3 py-1.5 text-[12px] border rounded"
-            [class.bg-[#0275D8]]="heatmapMode() === 'off'"
-            [class.text-white]="heatmapMode() === 'off'"
-            [class.border-[#0275D8]]="heatmapMode() === 'off'"
-            [class.border-[#CCC]]="heatmapMode() !== 'off'">
-      Off
-    </button>
-    <button (click)="toggleHeatmap('occupancy')"
+            [class.bg-[#0275D8]]="overlayMode() === 'off'"
+            [class.text-white]="overlayMode() === 'off'"
+            [class.border-[#0275D8]]="overlayMode() === 'off'"
+            [class.border-[#CCC]]="overlayMode() !== 'off'">Category</button>
+    <button (click)="toggleOverlay('occupancy')"
             class="px-3 py-1.5 text-[12px] border rounded"
-            [class.bg-[#0275D8]]="heatmapMode() === 'occupancy'"
-            [class.text-white]="heatmapMode() === 'occupancy'"
-            [class.border-[#0275D8]]="heatmapMode() === 'occupancy'"
-            [class.border-[#CCC]]="heatmapMode() !== 'occupancy'">
-      Occupancy
-    </button>
-    <button (click)="toggleHeatmap('dwell')"
+            [class.bg-[#0275D8]]="overlayMode() === 'occupancy'"
+            [class.text-white]="overlayMode() === 'occupancy'"
+            [class.border-[#0275D8]]="overlayMode() === 'occupancy'"
+            [class.border-[#CCC]]="overlayMode() !== 'occupancy'">Occupancy</button>
+    <button (click)="toggleOverlay('dwell')"
             class="px-3 py-1.5 text-[12px] border rounded"
-            [class.bg-[#0275D8]]="heatmapMode() === 'dwell'"
-            [class.text-white]="heatmapMode() === 'dwell'"
-            [class.border-[#0275D8]]="heatmapMode() === 'dwell'"
-            [class.border-[#CCC]]="heatmapMode() !== 'dwell'">
-      Dwell
-    </button>
+            [class.bg-[#0275D8]]="overlayMode() === 'dwell'"
+            [class.text-white]="overlayMode() === 'dwell'"
+            [class.border-[#0275D8]]="overlayMode() === 'dwell'"
+            [class.border-[#CCC]]="overlayMode() !== 'dwell'">Dwell</button>
   </div>
 
-  <button (click)="clearFilters()" class="text-[12px] text-[#0275D8] hover:underline">Reset</button>
+  <button (click)="fitAll()" class="text-[12px] border border-[#CCC] rounded px-2.5 py-1.5 hover:bg-[#F5F5F5]">
+    <i class="pi pi-arrows-alt text-[11px] mr-1"></i>Fit All
+  </button>
+  <button (click)="zoomIn()" class="text-[12px] border border-[#CCC] rounded px-2 py-1.5 hover:bg-[#F5F5F5]">+</button>
+  <button (click)="zoomOut()" class="text-[12px] border border-[#CCC] rounded px-2 py-1.5 hover:bg-[#F5F5F5]">−</button>
+  <button (click)="resetView()" class="text-[12px] border border-[#CCC] rounded px-2.5 py-1.5 hover:bg-[#F5F5F5]">Reset view</button>
+  <button (click)="resetFilters()" class="text-[12px] text-[#0275D8] hover:underline">Clear filters</button>
+
+  <div class="ml-auto flex items-center gap-2">
+    @if (canEditLayout()) {
+      @if (editor.state() === 'viewing') {
+        <button (click)="requestEdit()"
+                [disabled]="editor.pendingRequest()"
+                class="px-3 py-1.5 text-[12px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
+          <i class="pi pi-pencil mr-1.5"></i>
+          {{ authService.isManager() ? 'Edit Layout' : 'Request Edit' }}
+        </button>
+      }
+      @if (editor.state() === 'requesting') {
+        <span class="px-3 py-1.5 text-[12px] bg-[#FCF8E3] border border-[#FAEBCC] text-[#8A6D3B] rounded">
+          Waiting for Manager approval…
+        </span>
+      }
+      @if (editor.state() === 'holding' || editor.state() === 'savingLocked') {
+        <button (click)="saveLayout()"
+                [disabled]="!editor.hasDirty() || editor.saving()"
+                class="px-3 py-1.5 text-[12px] bg-[#3C763D] text-white rounded hover:bg-[#2E5E2E] disabled:opacity-50">
+          <i class="pi pi-save mr-1.5"></i>
+          {{ editor.saving() ? 'Saving…' : 'Save Layout' }}
+        </button>
+        <button (click)="releaseLock()"
+                class="px-3 py-1.5 text-[12px] border border-[#CCC] rounded hover:bg-[#F5F5F5]">
+          Release Lock
+        </button>
+      }
+    }
+    @if (canGrantRevoke() && editor.state() === 'readOnlyLocked') {
+      <button (click)="openRevokeConfirm()"
+              class="px-3 py-1.5 text-[12px] bg-[#D9534F] text-white rounded hover:bg-[#C9302C]">
+        <i class="pi pi-times mr-1.5"></i>Revoke
+      </button>
+    }
+  </div>
 </div>
 
+<!-- Category chips -->
+<div class="flex flex-wrap gap-1.5 mb-3">
+  @for (category of allCategories; track category) {
+    <button (click)="toggleCategory(category)"
+            class="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-full border transition-all"
+            [class.opacity-40]="!isCategoryActive(category)"
+            [class.border-[#CCC]]="!isCategoryActive(category)"
+            [class.border-[#333]]="isCategoryActive(category)"
+            [class.bg-white]="isCategoryActive(category)">
+      <span class="w-2.5 h-2.5 rounded" [style.background]="categoryColorOf(category)"></span>
+      {{ category }}
+    </button>
+  }
+</div>
+
+<!-- Error banner -->
 @if (error()) {
-  <div class="mb-4 p-3 bg-[#FDF2F2] border border-[#F5C6CB] rounded text-[12px] text-[#D9534F]">
+  <div class="mb-3 p-3 bg-[#FDF2F2] border border-[#F5C6CB] rounded text-[12px] text-[#D9534F]">
     {{ error() }}
   </div>
 }
 
-@if (loading()) {
-  <div class="bg-white border border-[#E0E0E0] rounded p-8 text-center text-[13px] text-[#888]">Loading yard map...</div>
-} @else {
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    <div class="bg-white border border-[#E0E0E0] rounded">
-      <div class="px-4 py-3 border-b border-[#E0E0E0] flex items-center justify-between">
-        <span class="text-[13px] font-semibold text-[#333]">Block Overview</span>
-        <span class="text-[12px] text-[#888]">{{ blocks().length }} physical blocks</span>
-      </div>
-      <div class="p-4 space-y-2">
-        @for (b of blocks(); track b.blockCode) {
-          <button (click)="selectBlock(b.blockCode)"
-                  class="w-full text-left border rounded px-3 py-2 hover:bg-[#F9F9F9]"
-                  [class.border-[#0275D8]]="selectedBlockCode() === b.blockCode"
-                  [class.bg-[#EFF8FF]]="selectedBlockCode() === b.blockCode">
-            <div class="flex items-center justify-between">
-              <span class="font-medium text-[13px] text-[#333]">{{ b.blockCode }}</span>
-              <span class="text-[12px] text-[#666]">{{ b.occupancyPercent }}%</span>
-            </div>
-            <div class="text-[11px] text-[#888] mt-1">
-              {{ b.occupiedSlots }} occupied
-              @if (b.maxCapacity) { / {{ b.maxCapacity }} capacity }
-            </div>
-          </button>
-        } @empty {
-          <div class="text-[12px] text-[#888]">No blocks available</div>
-        }
-      </div>
-    </div>
+<!-- Canvas host -->
+<div class="bg-white border border-[#E0E0E0] rounded overflow-hidden">
+  <div #canvasHost class="w-full h-[560px] bg-[#FAFAFA]"></div>
+</div>
 
-    <div class="bg-white border border-[#E0E0E0] rounded">
-      <div class="px-4 py-3 border-b border-[#E0E0E0] flex items-center justify-between">
-        <span class="text-[13px] font-semibold text-[#333]">Map Data (Scaffold)</span>
-        <span class="text-[12px] text-[#888]">{{ filteredSlots().length }} slots</span>
-      </div>
-      <div class="p-4">
-        <div class="text-[12px] text-[#666] mb-3">
-          Canvas rendering (Konva) is next phase. Current scaffold validates backend contract, focus loading, and realtime connectivity.
+<!-- Quick legend -->
+<div class="mt-2 text-[11px] text-[#888]">
+  Scroll to zoom · drag background to pan · click a block for drill-in · drag a block when holding the layout lock.
+</div>
+
+<!-- Drill-in slide-over -->
+<app-slide-over [open]="drilldownOpen()" [width]="'640px'"
+                [title]="'Block ' + selectedBlockCode()"
+                (onClose)="closeDrilldown()">
+  <div class="space-y-3">
+    @if (editor.isHolder() && selectedBlock()) {
+      <div class="border border-[#0275D8] bg-[#EFF8FF] rounded p-3 space-y-3">
+        <div class="text-[12px] font-semibold text-[#0275D8]">
+          <i class="pi pi-pencil mr-1"></i>Edit block
         </div>
-
-        @if (selectedBlockCode()) {
-          <div class="mb-3 p-2.5 bg-[#F5F5F5] border border-[#E0E0E0] rounded text-[12px]">
-            Focus block: <span class="font-medium">{{ selectedBlockCode() }}</span>
-          </div>
-        }
-
-        @if (heatmapMode() !== 'off') {
-          <div class="mb-3 p-2.5 bg-[#FCF8E3] border border-[#FAEBCC] rounded text-[12px] text-[#8A6D3B]">
-            Heatmap {{ heatmapMode() }} loaded: {{ heatmapCells().length }} cells
-          </div>
-        }
-
-        @if (lastEvent()) {
-          <div class="mb-3 p-2.5 bg-[#D9EDF7] border border-[#BCE8F1] rounded text-[12px] text-[#31708F]">
-            Last event: {{ lastEvent()!.eventType }} — {{ lastEvent()!.containerNumber }} &#64; {{ lastEvent()!.blockCode }}
-          </div>
-        }
-
-        <div class="max-h-[320px] overflow-auto border border-[#E0E0E0] rounded">
-          <table class="w-full text-[12px]">
-            <thead class="bg-[#F9F9F9] border-b border-[#E0E0E0]">
-              <tr>
-                <th class="text-left px-3 py-2">Container</th>
-                <th class="text-left px-3 py-2">Block</th>
-                <th class="text-left px-3 py-2">Position</th>
-                <th class="text-left px-3 py-2">Tier</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (s of filteredSlots(); track s.visitId) {
-                <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
-                  <td class="px-3 py-2 font-mono text-[11px] text-[#0275D8]">{{ s.containerNumber }}</td>
-                  <td class="px-3 py-2">{{ s.blockCode }}</td>
-                  <td class="px-3 py-2">{{ s.bay }}-{{ s.row }}</td>
-                  <td class="px-3 py-2">{{ s.tier }}</td>
-                </tr>
-              } @empty {
-                <tr><td colspan="4" class="px-3 py-4 text-center text-[#888]">No slots match current filters</td></tr>
+        <div class="grid grid-cols-2 gap-2 text-[12px]">
+          <label class="flex flex-col gap-1">
+            <span class="text-[#555]">Category</span>
+            <select [(ngModel)]="inspectorDraft.category"
+                    class="border border-[#CCC] rounded px-2 py-1 text-[12px] bg-white">
+              @for (cat of allCategories; track cat) {
+                <option [value]="cat">{{ cat }}</option>
               }
-            </tbody>
-          </table>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-[#555]">Rotation</span>
+            <select [(ngModel)]="inspectorDraft.rotation"
+                    class="border border-[#CCC] rounded px-2 py-1 text-[12px] bg-white">
+              @for (deg of rotationOptions; track deg) {
+                <option [ngValue]="deg">{{ deg }}°</option>
+              }
+            </select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-[#555]">Width (units)</span>
+            <input type="number" min="1" [(ngModel)]="inspectorDraft.canvasWidth"
+                   class="border border-[#CCC] rounded px-2 py-1 text-[12px]">
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-[#555]">Height (units)</span>
+            <input type="number" min="1" [(ngModel)]="inspectorDraft.canvasHeight"
+                   class="border border-[#CCC] rounded px-2 py-1 text-[12px]">
+          </label>
+          <label class="flex flex-col gap-1 col-span-2">
+            <span class="text-[#555]">Color override (optional hex, e.g. #2196F3)</span>
+            <input type="text" maxlength="16" placeholder="blank = use category color"
+                   [(ngModel)]="inspectorDraft.colorOverride"
+                   class="border border-[#CCC] rounded px-2 py-1 text-[12px] font-mono">
+          </label>
+        </div>
+        <div class="flex gap-2">
+          <button (click)="applyInspector()"
+                  class="px-3 py-1.5 text-[12px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5]">
+            Apply to dirty list
+          </button>
+          <span class="text-[11px] text-[#888] self-center">
+            Changes stage locally. Click <strong>Save Layout</strong> in the toolbar to persist.
+          </span>
         </div>
       </div>
-    </div>
+    }
+
+    @if (blockDetailSlots().length === 0) {
+      <div class="text-[12px] text-[#888]">No positioned containers in this block.</div>
+    }
+    @if (blockDetailSlots().length > 0) {
+      <div class="text-[12px] text-[#555] mb-1">{{ blockDetailSlots().length }} slots (bay×row)</div>
+      <div class="grid gap-1"
+           [style.grid-template-columns]="'repeat(10, minmax(28px, 1fr))'">
+        @for (slot of blockDetailSlots(); track slot.visitId) {
+          <button (click)="selectSlot(slot)"
+                  class="aspect-square rounded border text-[10px] font-mono flex items-center justify-center"
+                  [class.border-[#2196F3]]="selectedSlot()?.visitId === slot.visitId"
+                  [class.bg-[#E3F2FD]]="selectedSlot()?.visitId === slot.visitId"
+                  [class.border-[#CCC]]="selectedSlot()?.visitId !== slot.visitId"
+                  [title]="slot.containerNumber + ' · ' + slot.containerType + ' ' + slot.containerSize + 'ft · ' + slot.lineOperatorCode">
+            {{ slot.bay }}·{{ slot.row }}
+            @if (slot.tier > 1) {
+              <span class="ml-0.5 text-[#888]">/{{ slot.tier }}</span>
+            }
+          </button>
+        }
+      </div>
+    }
+
+    @if (selectedSlot(); as slot) {
+      <div class="mt-4 border-t border-[#F0F0F0] pt-3 space-y-1 text-[12px]">
+        <div class="font-mono font-semibold text-[#0275D8]">{{ slot.containerNumber }}</div>
+        <div><span class="text-[#888]">Type:</span> {{ slot.containerType }} {{ slot.containerSize }}ft</div>
+        <div><span class="text-[#888]">Line operator:</span> {{ slot.lineOperatorCode }}</div>
+        <div><span class="text-[#888]">Classification:</span> {{ slot.classification }}</div>
+        <div><span class="text-[#888]">Condition:</span> {{ slot.condition }}</div>
+        <div><span class="text-[#888]">Position:</span> Bay {{ slot.bay }} · Row {{ slot.row }} · Tier {{ slot.tier }}</div>
+        <div><span class="text-[#888]">Inbound:</span> {{ slot.inboundAt | date:'short' }}</div>
+        <div><span class="text-[#888]">Dwell:</span> {{ slot.dwellDays }} days</div>
+        @if (canRelocate()) {
+          <a [routerLink]="['/operations']" [queryParams]="{ tab: 'relocate', container: slot.containerNumber }"
+             class="inline-block mt-2 px-3 py-1.5 text-[12px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5]">
+            <i class="pi pi-sign-out mr-1.5"></i>Relocate
+          </a>
+        }
+      </div>
+    }
   </div>
-}
+</app-slide-over>
+
+<!-- Manager approval dialog -->
+<app-confirm-dialog [open]="approvalOpen()"
+                    [title]="'Layout edit request'"
+                    [message]="(approvalRequest()?.requesterFullName ?? approvalRequest()?.requesterUserName ?? 'A YardPlanner') + ' is requesting the layout lock.' + (approvalRequest()?.reason ? ' Reason: ' + approvalRequest()?.reason : '')"
+                    [confirmLabel]="'Grant'"
+                    [cancelLabel]="'Dismiss'"
+                    variant="warning"
+                    (onConfirm)="grantApproval()"
+                    (onCancel)="dismissApproval()" />
+
+<!-- Revoke confirm -->
+<app-confirm-dialog [open]="revokeConfirmOpen()"
+                    [title]="'Revoke layout lock'"
+                    [message]="'Force-release the current layout lock? The holder will lose unsaved changes.'"
+                    [confirmLabel]="'Revoke'"
+                    [cancelLabel]="'Cancel'"
+                    variant="danger"
+                    (onConfirm)="confirmRevoke()"
+                    (onCancel)="cancelRevoke()" />

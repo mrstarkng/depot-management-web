@@ -4,7 +4,7 @@ import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { DepotService } from '../../core/services/depot.service';
 import { AuthService } from '../../core/services/auth.service';
-import { YardBlock, CreateYardBlockRequest, YardBlockType } from '../../core/models/depot.models';
+import { YardBlock, CreateYardBlockRequest, YardBlockType, YardBlockCategory } from '../../core/models/depot.models';
 import { StatusBadgeComponent, SlideOverComponent, PaginationComponent, SectionDividerComponent, ConfirmDialogComponent } from '../../core/components';
 
 type SortKey = 'code' | 'blockType' | 'bayCount' | 'rowCount' | 'tierCount' | 'activeContainerCount';
@@ -38,7 +38,9 @@ export class YardBlocksComponent implements OnInit {
   editMode = false;
   editId = 0;
   saving = false;
-  form: CreateYardBlockRequest = { code: '', name: '', blockType: YardBlockType.Physical };
+  form: CreateYardBlockRequest = { code: '', name: '', blockType: YardBlockType.Physical, category: YardBlockCategory.Standard };
+
+  readonly allCategories = Object.values(YardBlockCategory);
 
   // Menu
   openMenuId: number | null = null;
@@ -109,14 +111,23 @@ export class YardBlocksComponent implements OnInit {
   }
 
   openCreate() {
-    this.form = { code: '', name: '', blockType: YardBlockType.Physical };
+    this.form = { code: '', name: '', blockType: YardBlockType.Physical, category: YardBlockCategory.Standard };
     this.editMode = false;
     this.editId = 0;
     this.slideOpen = true;
   }
 
   openEdit(block: YardBlock) {
-    this.form = { code: block.code, name: block.name, blockType: block.blockType as YardBlockType, bayCount: block.bayCount, rowCount: block.rowCount, tierCount: block.tierCount, maxCapacity: block.maxCapacity };
+    this.form = {
+      code: block.code,
+      name: block.name,
+      blockType: block.blockType as YardBlockType,
+      category: (block as any).category ?? YardBlockCategory.Standard,
+      bayCount: block.bayCount,
+      rowCount: block.rowCount,
+      tierCount: block.tierCount,
+      maxCapacity: block.maxCapacity,
+    };
     this.editMode = true;
     this.editId = block.id;
     this.slideOpen = true;

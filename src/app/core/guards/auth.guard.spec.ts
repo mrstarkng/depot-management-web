@@ -27,8 +27,9 @@ describe('Auth Guards', () => {
     // L-T03: AuthGuard redirects to /login if not authenticated
     it('should redirect to /login when not authenticated', () => {
       setup(false);
-      const result = TestBed.runInInjectionContext(() => authGuard(dummyRoute, dummyState));
-      expect(routerSpy.createUrlTree).toHaveBeenCalledWith(['/login']);
+      TestBed.runInInjectionContext(() => authGuard(dummyRoute, dummyState));
+      const call = routerSpy.createUrlTree.calls.mostRecent();
+      expect(call.args[0]).toEqual(['/login']);
     });
 
     // L-T04: AuthGuard allows access if authenticated

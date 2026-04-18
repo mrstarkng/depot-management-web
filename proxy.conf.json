@@ -2,12 +2,21 @@
   "/api": {
     "target": "http://localhost:5067",
     "secure": false,
-    "changeOrigin": false
+    "changeOrigin": false,
+    "logLevel": "debug"
   },
   "/hubs": {
     "target": "http://localhost:5067",
     "secure": false,
     "changeOrigin": false,
-    "ws": true
+    "ws": true,
+    "logLevel": "debug"
+  },
+  "/hubs/yard-map": {
+    "target": "http://localhost:5067",
+    "secure": false,
+    "changeOrigin": false,
+    "ws": true,
+    "logLevel": "debug"
   }
 }

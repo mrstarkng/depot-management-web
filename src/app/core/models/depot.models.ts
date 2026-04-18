@@ -70,6 +70,7 @@ export interface CreateYardBlockRequest {
   code: string;
   name: string;
   blockType: YardBlockType;
+  category?: YardBlockCategory;
   bayCount?: number;
   rowCount?: number;
   tierCount?: number;
@@ -334,7 +335,23 @@ export interface DepotDashboard {
   expiringSoonOrders?: ExpiringSoonOrder[];
 }
 
-// ── Yard Map ──
+// ── Yard Map (DEC-009) ──
+export enum YardBlockCategory {
+  Standard = 'Standard',
+  Reefer = 'Reefer',
+  OOG = 'OOG',
+  Hazardous = 'Hazardous',
+  Damaged = 'Damaged',
+  Empty = 'Empty',
+  Repair = 'Repair',
+  Inspection = 'Inspection',
+  Bonded = 'Bonded',
+  Service = 'Service',
+  Future = 'Future',
+}
+
+export type YardBlockRotation = 0 | 90 | 180 | 270;
+
 export interface YardMapContainerSlot {
   visitId: number;
   containerNumber: string;
@@ -350,9 +367,11 @@ export interface YardMapContainerSlot {
   inboundAt?: string;
   lastMovementAt?: string;
   movementType?: string;
+  dwellDays?: number;
 }
 
 export interface YardMapBlock {
+  id: number;
   blockCode: string;
   blockName?: string;
   blockType?: YardBlockType | string;
@@ -362,10 +381,33 @@ export interface YardMapBlock {
   maxCapacity?: number;
   occupiedSlots: number;
   occupancyPercent: number;
+  canvasX: number;
+  canvasY: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  rotation: YardBlockRotation;
+  category: YardBlockCategory;
+  colorOverride?: string | null;
+  rowVersion?: string | null;
+}
+
+export interface YardMapFacility {
+  code: string;
+  label: string;
+  kind: 'Gate' | 'Admin' | string;
+  canvasX: number;
+  canvasY: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  rotation: YardBlockRotation;
+  colorToken?: string;
 }
 
 export interface YardMapOverview {
+  generatedAt?: string;
+  revision?: string;
   blocks: YardMapBlock[];
+  facilities?: YardMapFacility[];
   slots: YardMapContainerSlot[];
 }
 
@@ -378,18 +420,90 @@ export interface YardMapHeatmapCell {
   blockCode: string;
   bay?: number;
   row?: number;
+  tier?: number;
   occupancyPercent?: number;
   dwellTimeDays?: number;
 }
 
 export interface YardMapRealtimeEvent {
-  eventType: 'ContainerGateIn' | 'ContainerMoved' | 'ContainerGateOut' | string;
-  visitId: number;
-  containerNumber: string;
-  blockCode: string;
+  eventType:
+    | 'ContainerGateIn'
+    | 'ContainerMoved'
+    | 'ContainerGateOut'
+    | 'LayoutLockAcquired'
+    | 'LayoutLockReleased'
+    | 'LayoutLockExpired'
+    | 'LayoutLockRequested'
+    | 'LayoutSaved'
+    | string;
+  visitId?: number;
+  containerNumber?: string;
+  blockCode?: string;
   bay?: number;
   row?: number;
   tier?: number;
   movementType?: string;
   movedAt?: string;
+}
+
+export interface YardLayoutLockDto {
+  id: number;
+  eventType?: string;
+  eventAt?: string;
+  holderUserId: string;
+  holderUserName?: string;
+  holderFullName?: string;
+  holderRole: string;
+  grantedByUserId?: string | null;
+  grantedByUserName?: string | null;
+  revokedByUserId?: string | null;
+  revokedByUserName?: string | null;
+  acquiredAt: string;
+  expiresAt: string;
+  releasedAt?: string | null;
+  releaseReason?: string | null;
+  isActive: boolean;
+}
+
+export interface LayoutLockRequestedEvent {
+  requesterUserId: string;
+  requesterUserName?: string;
+  requesterFullName?: string;
+  reason?: string;
+  requestedAt: string;
+}
+
+export interface LayoutSavedEvent {
+  eventType: 'LayoutSaved';
+  eventAt: string;
+  savedByUserId: string;
+  savedByUserName?: string;
+  changedBlockCodes: string[];
+  revision: string;
+}
+
+export interface LayoutGrantRequest {
+  userId: string;
+  ttlMinutes?: number;
+  reason?: string;
+}
+
+export interface LayoutLockRequestPayload {
+  reason?: string;
+}
+
+export interface LayoutBlockUpdate {
+  yardBlockId: number;
+  canvasX: number;
+  canvasY: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  rotation: YardBlockRotation;
+  category: YardBlockCategory;
+  colorOverride?: string | null;
+  rowVersion?: string | null;
+}
+
+export interface LayoutSaveRequest {
+  blocks: LayoutBlockUpdate[];
 }
