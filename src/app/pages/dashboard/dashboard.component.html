@@ -272,11 +272,9 @@
           <div class="text-[11px] text-[#9CA3AF] mt-1">Thử mở rộng khoảng ngày hoặc kiểm tra filter.</div>
         </div>
       } @else {
-        <div style="height: 560px;">
-          @if (throughputChartData) {
-            <p-chart type="line" [data]="throughputChartData" [options]="throughputChartOptions" />
-          }
-        </div>
+        @if (throughputChartData) {
+          <p-chart type="line" [data]="throughputChartData" [options]="throughputChartOptions" height="560px" />
+        }
       }
     </div>
   </div>
@@ -342,9 +340,7 @@
           <div class="text-[13px] text-[#6B7280] font-medium">Chưa có container đang InDepot</div>
         </div>
       } @else {
-        <div style="height: 480px;">
-          <p-chart type="bar" [data]="stockChartData" [options]="stockChartOptions" />
-        </div>
+        <p-chart type="bar" [data]="stockChartData" [options]="stockChartOptions" height="560px" />
       }
     </div>
   </div>

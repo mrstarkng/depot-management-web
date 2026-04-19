@@ -337,7 +337,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           backgroundColor: '#2563EB',
           borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 },
           borderSkipped: false,
-          maxBarThickness: 56,
+          maxBarThickness: 120,
         },
         {
           label: 'Long-stay (≥ 10 ngày)',
@@ -345,7 +345,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           backgroundColor: '#E65100',
           borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
           borderSkipped: false,
-          maxBarThickness: 56,
+          maxBarThickness: 120,
         },
       ],
     };
