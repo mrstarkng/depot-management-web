@@ -307,13 +307,18 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  loadBlockDetail(blockCode: string) {
+  loadBlockDetail(blockCode: string, focusContainerNumber?: string) {
     if (!blockCode) return;
     this.yardMap.getBlockDetail(blockCode).subscribe({
       next: detail => {
         this.blockDetailSlots.set(detail.slots);
         this.selectedBlockCode.set(detail.block.blockCode);
         this.drilldownOpen.set(true);
+        if (focusContainerNumber) {
+          const target = focusContainerNumber.toUpperCase();
+          const slot = detail.slots.find(s => s.containerNumber?.toUpperCase() === target);
+          if (slot) this.selectedSlot.set(slot);
+        }
       },
       error: err => this.showError('Block detail', err),
     });
@@ -417,6 +422,13 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
     this.searchDebounce$.next(term);
   }
 
+  // Explicit trigger — called from Enter key or the search button so the user
+  // can re-run the same query (e.g. after closing the drill-in panel) without
+  // having to edit the input.
+  triggerSearch() {
+    this.applySearch(this.searchInput());
+  }
+
   private applySearch(term: string) {
     if (!term) return;
     const target = term.trim().toUpperCase();
@@ -451,9 +463,11 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
         }
         const blockCode = visit.yardBlockCode;
         if (blockCode) {
-          this.selectBlock(blockCode);
+          this.selectedBlockCode.set(blockCode);
+          this.renderer?.setSelection(blockCode);
           this.renderer?.panTo(blockCode);
-          this.loadBlockDetail(blockCode);
+          // Open drill-in + auto-select the exact slot holding the container.
+          this.loadBlockDetail(blockCode, target);
         }
       },
       error: err => this.showError('Search', err),
