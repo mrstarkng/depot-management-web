@@ -239,7 +239,7 @@ export class KonvaYardMap {
       block,
       mode: this.overlayMode,
       overlayValue: this.overlayValueFor(block),
-      dimmed,
+      dimmed: false,
     });
 
     // DEC-010 — core block: không cho drag, vẽ dashed border để phân biệt visual.
@@ -249,6 +249,10 @@ export class KonvaYardMap {
       y: block.canvasY * UNIT_PX,
       rotation: block.rotation ?? 0,
       draggable: this.editable && !isCore,
+      // Spec: wireframe_prompt.md Screen 7 — non-matching dimmed to 20% opacity.
+      // Apply on the group so fill + stroke + labels all dim together.
+      opacity: dimmed ? 0.2 : 1,
+      listening: !dimmed,
     });
 
     const selected = this.selectedBlockCode === block.blockCode;

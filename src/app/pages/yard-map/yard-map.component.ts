@@ -29,6 +29,7 @@ import {
   LayoutSavedEvent,
 } from '../../core/models/depot.models';
 import { YardMapService, YardMapConnectionState } from '../../core/services/yard-map.service';
+import { DepotService } from '../../core/services/depot.service';
 import { AuthService } from '../../core/services/auth.service';
 import {
   ConfirmDialogComponent,
@@ -61,6 +62,7 @@ interface HeatmapCacheEntry {
 export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly route = inject(ActivatedRoute);
   private readonly yardMap = inject(YardMapService);
+  private readonly depot = inject(DepotService);
   private readonly messageService = inject(MessageService);
   readonly authService = inject(AuthService);
   readonly editor = inject(LayoutEditorStore);
@@ -418,20 +420,44 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
   private applySearch(term: string) {
     if (!term) return;
     const target = term.trim().toUpperCase();
+    if (target.length < 2) return;
     const snapshot = this.overview();
     if (!snapshot) return;
-    const matchBlock = snapshot.blocks.find(b => b.blockCode.toUpperCase() === target);
-    if (matchBlock) {
-      this.selectBlock(matchBlock.blockCode);
-      this.renderer?.panTo(matchBlock.blockCode);
+
+    // 1. Block code substring match (prefix + contains, prefer exact).
+    const exactBlock = snapshot.blocks.find(b => b.blockCode.toUpperCase() === target);
+    const partialBlock = exactBlock
+      ?? snapshot.blocks.find(b => b.blockCode.toUpperCase().startsWith(target))
+      ?? snapshot.blocks.find(b => b.blockCode.toUpperCase().includes(target));
+    if (partialBlock) {
+      this.selectBlock(partialBlock.blockCode);
+      this.renderer?.panTo(partialBlock.blockCode);
       return;
     }
-    // fallback: treat as container search (we don't have full slot index on overview, so just use drill-in data)
-    const slot = this.blockDetailSlots().find(s => s.containerNumber?.toUpperCase().includes(target));
-    if (slot) {
-      this.selectedSlot.set(slot);
-      this.drilldownOpen.set(true);
-    }
+
+    // 2. Container number lookup via backend — wireframe_prompt.md Screen 7:
+    // "SEARCH container# → canvas zooms to block". Works from overview, no drill-in needed.
+    this.depot.getContainerVisits({ containerNumber: target, status: 'InDepot' }).subscribe({
+      next: visits => {
+        const visit = visits.find(v => v.containerNumber?.toUpperCase() === target) ?? visits[0];
+        if (!visit) {
+          this.messageService.add({
+            severity: 'info',
+            summary: 'Không tìm thấy',
+            detail: `Không có block/container khớp "${target}" trong depot.`,
+            life: 3000,
+          });
+          return;
+        }
+        const blockCode = visit.yardBlockCode;
+        if (blockCode) {
+          this.selectBlock(blockCode);
+          this.renderer?.panTo(blockCode);
+          this.loadBlockDetail(blockCode);
+        }
+      },
+      error: err => this.showError('Search', err),
+    });
   }
 
   fitAll() { this.renderer?.fitAll(); }

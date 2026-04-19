@@ -43,20 +43,24 @@
          class="border border-[#CCC] rounded px-3 py-1.5 text-[13px] w-[240px]">
 
   <div class="flex items-center gap-1">
+    <span class="text-[11px] text-[#888] mr-1">Overlay:</span>
     <button (click)="toggleOverlay('off')"
             class="px-3 py-1.5 text-[12px] border rounded"
+            title="Hiển thị màu category mặc định"
             [class.bg-[#0275D8]]="overlayMode() === 'off'"
             [class.text-white]="overlayMode() === 'off'"
             [class.border-[#0275D8]]="overlayMode() === 'off'"
-            [class.border-[#CCC]]="overlayMode() !== 'off'">Category</button>
+            [class.border-[#CCC]]="overlayMode() !== 'off'">Off</button>
     <button (click)="toggleOverlay('occupancy')"
             class="px-3 py-1.5 text-[12px] border rounded"
+            title="Heatmap theo % đầy của block"
             [class.bg-[#0275D8]]="overlayMode() === 'occupancy'"
             [class.text-white]="overlayMode() === 'occupancy'"
             [class.border-[#0275D8]]="overlayMode() === 'occupancy'"
             [class.border-[#CCC]]="overlayMode() !== 'occupancy'">Occupancy</button>
     <button (click)="toggleOverlay('dwell')"
             class="px-3 py-1.5 text-[12px] border rounded"
+            title="Heatmap theo số ngày container tồn trung bình"
             [class.bg-[#0275D8]]="overlayMode() === 'dwell'"
             [class.text-white]="overlayMode() === 'dwell'"
             [class.border-[#0275D8]]="overlayMode() === 'dwell'"
