@@ -273,7 +273,9 @@
         </div>
       } @else {
         <div style="height: 560px;">
-          <p-chart type="line" [data]="throughputChartData" [options]="throughputChartOptions" />
+          @if (throughputChartData) {
+            <p-chart type="line" [data]="throughputChartData" [options]="throughputChartOptions" />
+          }
         </div>
       }
     </div>

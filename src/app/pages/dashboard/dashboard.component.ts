@@ -108,7 +108,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   setThroughputMode(mode: ThroughputMode) {
     this.throughputMode = mode;
-    this.throughputChartData = this.buildThroughputChartData(this.throughputRaw, mode);
+    const newData = this.buildThroughputChartData(this.throughputRaw, mode);
+    // Chart.js / p-chart does not reliably re-render when dataset COUNT
+    // changes (both = 2N datasets, inbound/outbound = N). Null → next tick
+    // assign forces Angular to destroy + recreate the <p-chart>, which
+    // guarantees a fresh Chart.js instance picks up the new shape.
+    this.throughputChartData = null;
+    setTimeout(() => { this.throughputChartData = newData; }, 0);
   }
 
   get hasThroughputData(): boolean {
