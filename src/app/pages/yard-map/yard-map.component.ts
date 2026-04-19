@@ -162,13 +162,16 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
   private editorErrSub?: Subscription;
 
   constructor() {
-    // Re-render when signals change
+    // Re-render when signals change.
+    // Category chip = filter: only blocks whose category is active render.
+    // Hide (not dim) makes chip state unambiguous — user immediately sees
+    // the canvas change when they toggle.
     effect(() => {
       const r = this.renderer;
       if (!r) return;
-      r.setBlocks(this.overview()?.blocks ?? []);
+      r.setBlocks(this.filteredBlocks());
       r.setFacilities(this.overview()?.facilities ?? []);
-      r.setDimmedBlocks(this.dimmedBlockCodes());
+      r.setDimmedBlocks([]);
       r.setSelection(this.selectedBlockCode());
     });
 
