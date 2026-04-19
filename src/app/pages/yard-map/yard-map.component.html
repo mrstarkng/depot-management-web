@@ -121,15 +121,23 @@
 </div>
 
 <!-- Category chips -->
-<div class="flex flex-wrap gap-1.5 mb-3">
+<div class="flex flex-wrap gap-1.5 mb-3 items-center">
+  <span class="text-[11px] text-[#888] mr-1">Filter:</span>
   @for (category of allCategories; track category) {
-    <button (click)="toggleCategory(category)"
-            class="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-full border transition-all"
-            [class.opacity-40]="!isCategoryActive(category)"
-            [class.border-[#CCC]]="!isCategoryActive(category)"
+    <button type="button" (click)="toggleCategory(category)"
+            [title]="isCategoryActive(category) ? 'Click để ẩn block ' + category : 'Click để hiện lại block ' + category"
+            class="flex items-center gap-1.5 px-2.5 py-1 text-[11px] rounded-full border transition-all cursor-pointer select-none"
+            [class.bg-white]="isCategoryActive(category)"
             [class.border-[#333]]="isCategoryActive(category)"
-            [class.bg-white]="isCategoryActive(category)">
-      <span class="w-2.5 h-2.5 rounded" [style.background]="categoryColorOf(category)"></span>
+            [class.text-[#333]]="isCategoryActive(category)"
+            [class.bg-[#F5F5F5]]="!isCategoryActive(category)"
+            [class.border-dashed]="!isCategoryActive(category)"
+            [class.border-[#BBB]]="!isCategoryActive(category)"
+            [class.text-[#999]]="!isCategoryActive(category)"
+            [class.line-through]="!isCategoryActive(category)">
+      <span class="w-2.5 h-2.5 rounded"
+            [style.background]="isCategoryActive(category) ? categoryColorOf(category) : 'transparent'"
+            [style.border]="isCategoryActive(category) ? 'none' : '1px solid ' + categoryColorOf(category)"></span>
       {{ category }}
     </button>
   }
