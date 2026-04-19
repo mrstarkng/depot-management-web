@@ -49,6 +49,10 @@ export class DepotService {
     return this.http.put<LineOperator>(`${this.baseUrl}/line-operators/${id}`, req);
   }
 
+  deleteLineOperator(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/line-operators/${id}`);
+  }
+
   // ── Customers ──
   getCustomers(): Observable<Customer[]> {
     return this.http.get<Customer[]>(`${this.baseUrl}/customers`);
@@ -60,6 +64,10 @@ export class DepotService {
 
   updateCustomer(id: number, req: Partial<Customer>): Observable<Customer> {
     return this.http.put<Customer>(`${this.baseUrl}/customers/${id}`, req);
+  }
+
+  deleteCustomer(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/customers/${id}`);
   }
 
   // ── Yard Blocks ──

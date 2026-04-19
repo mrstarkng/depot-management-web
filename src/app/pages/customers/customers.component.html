@@ -1,12 +1,15 @@
+<p-toast position="top-right" [breakpoints]="{'640px':{width:'100%'}}" />
+
 <div class="flex items-center justify-between mb-4">
   <div>
     <div class="text-[11px] text-[#888] mb-1">Home › Reference Data › Customers</div>
     <h1 class="text-[20px] font-semibold text-[#333]">Customers</h1>
   </div>
-</div>
-
-<div class="mb-4 p-3 bg-[#FCF8E3] border border-[#FAEBCC] rounded text-[12px] text-[#8A6D3B]">
-  The current backend read model exposes customer code and name for listing screens. Additional profile fields are not returned by the API yet.
+  @if (authService.canManageOrders()) {
+    <button (click)="openCreate()" class="bg-[#0275D8] text-white px-4 py-2 rounded text-[13px] font-medium hover:bg-[#025AA5]">
+      <i class="pi pi-plus mr-1.5"></i>New Customer
+    </button>
+  }
 </div>
 
 <div class="bg-white border border-[#E0E0E0] rounded p-3 mb-4 flex flex-wrap items-center gap-3">
@@ -26,6 +29,9 @@
         <th (click)="handleSort('name')" class="text-left px-3 py-2.5 text-[12px] font-semibold text-[#555] cursor-pointer select-none">
           Name
         </th>
+        @if (authService.canManageOrders()) {
+          <th class="text-right px-3 py-2.5 text-[12px] font-semibold text-[#555] w-[120px]">Actions</th>
+        }
       </tr>
     </thead>
     <tbody>
@@ -33,10 +39,22 @@
         <tr class="border-b border-[#F0F0F0] hover:bg-[#F9F9F9]">
           <td class="px-3 py-2.5 font-mono text-[12px]">{{ customer.taxCode }}</td>
           <td class="px-3 py-2.5 font-medium">{{ customer.name }}</td>
+          @if (authService.canManageOrders()) {
+            <td class="px-3 py-2.5 text-right">
+              <button (click)="openEdit(customer)" title="Sửa"
+                      class="text-[#0275D8] hover:bg-[#EFF8FF] rounded px-1.5 py-1 text-[12px] mr-1">
+                <i class="pi pi-pencil text-[11px]"></i>
+              </button>
+              <button (click)="askDelete(customer)" title="Xoá"
+                      class="text-[#D9534F] hover:bg-[#FDF2F2] rounded px-1.5 py-1 text-[12px]">
+                <i class="pi pi-trash text-[11px]"></i>
+              </button>
+            </td>
+          }
         </tr>
       } @empty {
         <tr>
-          <td colspan="2" class="text-center py-8 text-[#888] text-[13px]">
+          <td [attr.colspan]="authService.canManageOrders() ? 3 : 2" class="text-center py-8 text-[#888] text-[13px]">
             {{ loading ? 'Loading...' : 'No customers found' }}
           </td>
         </tr>
@@ -47,3 +65,60 @@
   <app-pagination [currentPage]="page" [totalItems]="filtered.length" [itemsPerPage]="perPage"
                   (pageChange)="page = $event" (itemsPerPageChange)="perPage = $event; page = 1" />
 </div>
+
+<!-- Create / Edit slide-over -->
+<app-slide-over [open]="slideOpen" (onClose)="slideOpen = false"
+                [title]="form.id ? 'Edit Customer' : 'New Customer'">
+  <div class="space-y-3">
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Tax Code <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="form.taxCode" placeholder="e.g. 0100000001"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Name <span class="text-[#D9534F]">*</span></label>
+      <input [(ngModel)]="form.name" placeholder="Tên công ty"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Email</label>
+        <input [(ngModel)]="form.email" type="email" placeholder="contact@example.com"
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+      <div>
+        <label class="block text-[12px] font-medium text-[#555] mb-1">Phone</label>
+        <input [(ngModel)]="form.phone" placeholder="+84..."
+               class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+      </div>
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Contact Person</label>
+      <input [(ngModel)]="form.contactPerson" placeholder="Người liên hệ"
+             class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    </div>
+    <div>
+      <label class="block text-[12px] font-medium text-[#555] mb-1">Address</label>
+      <textarea [(ngModel)]="form.address" rows="2" placeholder="Địa chỉ"
+                class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]"></textarea>
+    </div>
+    <div class="flex gap-2 pt-4 border-t border-[#E0E0E0] mt-4">
+      <button (click)="slideOpen = false"
+              class="flex-1 px-4 py-2 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
+      <button (click)="save()" [disabled]="saving || formInvalid"
+              class="flex-1 px-4 py-2 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50 disabled:cursor-not-allowed">
+        {{ saving ? 'Saving…' : (form.id ? 'Update' : 'Create') }}
+      </button>
+    </div>
+  </div>
+</app-slide-over>
+
+<!-- Delete confirm -->
+<app-confirm-dialog [open]="!!deleteTarget"
+                    [title]="'Xoá customer'"
+                    [message]="'Xác nhận xoá ' + (deleteTarget?.name ?? '') + '? Thao tác không thể hoàn tác.'"
+                    [confirmLabel]="'Xoá'"
+                    [cancelLabel]="'Huỷ'"
+                    variant="danger"
+                    (onConfirm)="confirmDelete()"
+                    (onCancel)="cancelDelete()" />
