@@ -30,7 +30,27 @@ export class ContainerDetailComponent implements OnInit {
   // Relocate
   relocateSlideOpen = false;
   relocating = false;
-  relocateForm = { yardBlockId: 0, bay: 1, row: 1, tier: 1, reason: '' };
+  relocateForm: { yardBlockId: number; bay: number | null; row: number | null; tier: number | null; reason: string } = {
+    yardBlockId: 0, bay: 1, row: 1, tier: 1, reason: '',
+  };
+
+  get selectedRelocateBlock(): YardBlock | undefined {
+    return this.yardBlocks.find(b => b.id === Number(this.relocateForm.yardBlockId));
+  }
+
+  get relocateFormInvalid(): boolean {
+    const block = this.selectedRelocateBlock;
+    if (!block) return true;
+    if (block.blockType === 'Physical') {
+      const { bay, row, tier } = this.relocateForm;
+      if (bay == null || row == null || tier == null) return true;
+      if (bay < 1 || row < 1 || tier < 1) return true;
+      if (block.bayCount && bay > block.bayCount) return true;
+      if (block.rowCount && row > block.rowCount) return true;
+      if (block.tierCount && tier > block.tierCount) return true;
+    }
+    return false;
+  }
 
   // Outbound
   outboundSlideOpen = false;
@@ -69,8 +89,9 @@ export class ContainerDetailComponent implements OnInit {
 
   openRelocateSlide() {
     if (!this.authService.canManageYard()) return;
+    const firstPhysical = this.yardBlocks.find(b => b.blockType === 'Physical');
     this.relocateForm = {
-      yardBlockId: this.yardBlocks[0]?.id || 0,
+      yardBlockId: firstPhysical?.id ?? this.yardBlocks[0]?.id ?? 0,
       bay: 1, row: 1, tier: 1, reason: '',
     };
     this.relocateSlideOpen = true;
@@ -79,13 +100,18 @@ export class ContainerDetailComponent implements OnInit {
   doRelocate() {
     if (!this.authService.canManageYard()) return;
     if (!this.container) return;
+    if (this.relocateFormInvalid) return;
+    const block = this.selectedRelocateBlock;
+    const isVirtual = block?.blockType === 'Virtual';
     this.relocating = true;
     this.depotService.relocateContainer({
       containerNumber: this.container.containerNumber,
-      yardBlockId: this.relocateForm.yardBlockId,
-      bay: this.relocateForm.bay || undefined,
-      row: this.relocateForm.row || undefined,
-      tier: this.relocateForm.tier || undefined,
+      yardBlockId: Number(this.relocateForm.yardBlockId),
+      // Physical → send concrete values (required, validated above).
+      // Virtual → send undefined so backend accepts null coords (BR-CV-11).
+      bay: isVirtual ? undefined : this.relocateForm.bay ?? undefined,
+      row: isVirtual ? undefined : this.relocateForm.row ?? undefined,
+      tier: isVirtual ? undefined : this.relocateForm.tier ?? undefined,
       classification: (this.location?.classification || ContainerGrade.A) as ContainerGrade,
       condition: (this.location?.condition || ContainerConditionStatus.Normal) as ContainerConditionStatus,
       reason: this.relocateForm.reason,

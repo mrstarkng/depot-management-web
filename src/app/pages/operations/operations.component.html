@@ -586,6 +586,10 @@
             <div class="mb-3 text-[11px] text-[#8A6D3B]">
               <i class="pi pi-info-circle text-[10px] mr-1"></i>Block ảo không có vị trí bay/row/tier.
             </div>
+          } @else {
+            <div class="mb-3 text-[11px] text-[#888]">
+              <i class="pi pi-info-circle text-[10px] mr-1"></i>Chọn <strong>Target Block</strong> trước để nhập bay/row/tier.
+            </div>
           }
           <div class="grid grid-cols-2 gap-3 mb-3">
             <div>
@@ -736,6 +740,10 @@
       } @else if (selectedRelTabBlock && selectedRelTabBlock.blockType === 'Virtual') {
         <div class="mb-3 text-[11px] text-[#8A6D3B]">
           <i class="pi pi-info-circle text-[10px] mr-1"></i>Block ảo không có vị trí bay/row/tier.
+        </div>
+      } @else if (selectedRelTabContainer) {
+        <div class="mb-3 text-[11px] text-[#888]">
+          <i class="pi pi-info-circle text-[10px] mr-1"></i>Chọn <strong>New Block</strong> trước để nhập bay/row/tier.
         </div>
       }
 

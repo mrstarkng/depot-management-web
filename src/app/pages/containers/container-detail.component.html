@@ -202,20 +202,33 @@
         }
       </select>
     </div>
-    <div class="grid grid-cols-3 gap-3">
-      <div>
-        <label class="block text-[12px] font-medium text-[#555] mb-1">Bay</label>
-        <input type="number" [(ngModel)]="relocateForm.bay" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    @if (selectedRelocateBlock?.blockType === 'Physical') {
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Bay <span class="text-[#D9534F]">*</span></label>
+          <input type="number" [(ngModel)]="relocateForm.bay" min="1" [max]="selectedRelocateBlock?.bayCount ?? null"
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+        </div>
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Row <span class="text-[#D9534F]">*</span></label>
+          <input type="number" [(ngModel)]="relocateForm.row" min="1" [max]="selectedRelocateBlock?.rowCount ?? null"
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+        </div>
+        <div>
+          <label class="block text-[12px] font-medium text-[#555] mb-1">Tier <span class="text-[#D9534F]">*</span></label>
+          <input type="number" [(ngModel)]="relocateForm.tier" min="1" [max]="selectedRelocateBlock?.tierCount ?? null"
+                 class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+        </div>
       </div>
-      <div>
-        <label class="block text-[12px] font-medium text-[#555] mb-1">Row</label>
-        <input type="number" [(ngModel)]="relocateForm.row" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    } @else if (selectedRelocateBlock?.blockType === 'Virtual') {
+      <div class="text-[11px] text-[#8A6D3B] bg-[#FCF8E3] border border-[#FAEBCC] rounded px-2 py-1.5">
+        <i class="pi pi-info-circle text-[10px] mr-1"></i>Block ảo không có vị trí bay/row/tier — sẽ gửi null.
       </div>
-      <div>
-        <label class="block text-[12px] font-medium text-[#555] mb-1">Tier</label>
-        <input type="number" [(ngModel)]="relocateForm.tier" min="1" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
+    } @else {
+      <div class="text-[11px] text-[#888]">
+        <i class="pi pi-info-circle text-[10px] mr-1"></i>Chọn block trước để nhập vị trí.
       </div>
-    </div>
+    }
     <div>
       <label class="block text-[12px] font-medium text-[#555] mb-1">Reason</label>
       <input [(ngModel)]="relocateForm.reason" placeholder="Reason for relocating"
@@ -224,8 +237,8 @@
     <div class="flex gap-2 pt-4 border-t border-[#E0E0E0] mt-4">
       <button (click)="relocateSlideOpen = false"
               class="flex-1 px-4 py-2 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
-      <button (click)="doRelocate()" [disabled]="relocating"
-              class="flex-1 px-4 py-2 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
+      <button (click)="doRelocate()" [disabled]="relocating || relocateFormInvalid"
+              class="flex-1 px-4 py-2 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50 disabled:cursor-not-allowed">
         {{ relocating ? 'Relocating...' : 'Relocate' }}
       </button>
     </div>
