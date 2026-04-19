@@ -84,7 +84,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const to = parseInputDate(this.throughputTo);
     if (!from || !to) return;
     this.throughputLoading = true;
-    this.depotService.getThroughput(from, to).subscribe({
+    // TF-25 workaround: backend `/api/dashboard/throughput` uses SQL
+    // `BETWEEN @from AND @to` on a DateTime column, so `to = '2026-04-19'`
+    // parses as midnight and excludes same-day movements past midnight
+    // (e.g. a gate-in at 14:30 today). Shift `to` by +1 day client-side so
+    // the BE boundary includes the full selected end-date. Remove this
+    // shift once BE switches to `< DATEADD(DAY, 1, @to)` semantics.
+    const toInclusiveEnd = new Date(to);
+    toInclusiveEnd.setDate(toInclusiveEnd.getDate() + 1);
+    this.depotService.getThroughput(from, toInclusiveEnd).subscribe({
       next: data => {
         this.throughputRaw = data;
         this.throughputChartData = this.buildThroughputChartData(data, this.throughputMode);
