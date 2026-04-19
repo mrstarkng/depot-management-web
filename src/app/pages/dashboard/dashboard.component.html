@@ -194,12 +194,12 @@
     </div>
   </div>
 
-  <!-- ═══ TF-12 Throughput chart ═══ -->
-  <div class="bg-white border border-[#E0E0E0] rounded mt-5">
-    <div class="px-4 py-3 border-b border-[#F0F0F0] flex flex-wrap items-center justify-between gap-2">
+  <!-- ═══ TF-12 / TF-23 Throughput chart ═══ -->
+  <div class="bg-white border border-[#E0E0E0] rounded mt-5 shadow-sm">
+    <div class="px-5 py-4 border-b border-[#F0F0F0] flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h2 class="text-[13px] font-semibold text-[#333]">Sản lượng Gate-In/Out theo hãng</h2>
-        <div class="text-[11px] text-[#888]">SSC §5.4 — Inbound + Outbound / ngày / LineOperator</div>
+        <h2 class="text-[15px] font-semibold text-[#1F2937]">Sản lượng Gate-In/Out theo hãng</h2>
+        <div class="text-[11px] text-[#6B7280] mt-0.5">SSC §5.4 — Inbound + Outbound / ngày / Line Operator</div>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
         <label class="text-[11px] text-[#555] flex items-center gap-1">
@@ -212,58 +212,135 @@
           <input type="date" [(ngModel)]="throughputTo" (ngModelChange)="loadThroughput()"
                  class="border border-[#CCC] rounded px-2 py-1 text-[12px]">
         </label>
-        <div class="inline-flex rounded border border-[#CCC] overflow-hidden text-[11px]">
+        <div class="inline-flex rounded-md border border-[#D1D5DB] overflow-hidden text-[11px]">
           <button (click)="setThroughputMode('both')"
-                  class="px-2 py-1"
+                  class="px-3 py-1.5 font-medium"
                   [class.bg-[#0275D8]]="throughputMode === 'both'"
-                  [class.text-white]="throughputMode === 'both'">Cả hai</button>
+                  [class.text-white]="throughputMode === 'both'"
+                  [class.text-[#555]]="throughputMode !== 'both'">Cả hai</button>
           <button (click)="setThroughputMode('inbound')"
-                  class="px-2 py-1 border-l border-[#CCC]"
+                  class="px-3 py-1.5 font-medium border-l border-[#D1D5DB]"
                   [class.bg-[#0275D8]]="throughputMode === 'inbound'"
-                  [class.text-white]="throughputMode === 'inbound'">Inbound</button>
+                  [class.text-white]="throughputMode === 'inbound'"
+                  [class.text-[#555]]="throughputMode !== 'inbound'">Inbound</button>
           <button (click)="setThroughputMode('outbound')"
-                  class="px-2 py-1 border-l border-[#CCC]"
+                  class="px-3 py-1.5 font-medium border-l border-[#D1D5DB]"
                   [class.bg-[#0275D8]]="throughputMode === 'outbound'"
-                  [class.text-white]="throughputMode === 'outbound'">Outbound</button>
+                  [class.text-white]="throughputMode === 'outbound'"
+                  [class.text-[#555]]="throughputMode !== 'outbound'">Outbound</button>
         </div>
       </div>
     </div>
-    <div class="p-4">
+
+    @if (hasThroughputData) {
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-[#F0F0F0]">
+        <div class="px-5 py-3 border-r border-[#F0F0F0]">
+          <div class="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-medium">Total Inbound</div>
+          <div class="text-[22px] font-semibold text-[#2563EB] tabular-nums mt-1">{{ throughputInboundTotal }}</div>
+        </div>
+        <div class="px-5 py-3 border-r border-[#F0F0F0]">
+          <div class="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-medium">Total Outbound</div>
+          <div class="text-[22px] font-semibold text-[#E65100] tabular-nums mt-1">{{ throughputOutboundTotal }}</div>
+        </div>
+        <div class="px-5 py-3 border-r border-[#F0F0F0]">
+          <div class="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-medium">Net Flow</div>
+          <div class="text-[22px] font-semibold tabular-nums mt-1"
+               [class.text-[#059669]]="throughputNet >= 0"
+               [class.text-[#DC2626]]="throughputNet < 0">
+            {{ throughputNet >= 0 ? '+' : '' }}{{ throughputNet }}
+          </div>
+        </div>
+        <div class="px-5 py-3">
+          <div class="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-medium">Top Operator</div>
+          @if (throughputTopOperator) {
+            <div class="text-[15px] font-semibold text-[#1F2937] mt-1">{{ throughputTopOperator.code }}</div>
+            <div class="text-[11px] text-[#6B7280]">{{ throughputTopOperator.total }} movement</div>
+          } @else {
+            <div class="text-[13px] text-[#9CA3AF] mt-1">—</div>
+          }
+        </div>
+      </div>
+    }
+
+    <div class="p-5">
       @if (throughputLoading) {
-        <div class="text-center text-[12px] text-[#888] py-10">Đang tải…</div>
+        <div class="text-center text-[12px] text-[#888] py-16">Đang tải…</div>
       } @else if (!hasThroughputData) {
-        <div class="text-center text-[12px] text-[#888] py-10">Chưa có dữ liệu trong khoảng thời gian này.</div>
+        <div class="text-center py-16">
+          <i class="pi pi-chart-line text-[32px] text-[#D1D5DB] mb-2 block"></i>
+          <div class="text-[13px] text-[#6B7280] font-medium">Chưa có dữ liệu trong khoảng thời gian này</div>
+          <div class="text-[11px] text-[#9CA3AF] mt-1">Thử mở rộng khoảng ngày hoặc kiểm tra filter.</div>
+        </div>
       } @else {
-        <div style="height: 300px;">
+        <div style="height: 420px;">
           <p-chart type="line" [data]="throughputChartData" [options]="throughputChartOptions" />
         </div>
       }
     </div>
   </div>
 
-  <!-- ═══ TF-13 Stock by Operator chart ═══ -->
-  <div class="bg-white border border-[#E0E0E0] rounded mt-5">
-    <div class="px-4 py-3 border-b border-[#F0F0F0] flex items-center justify-between">
+  <!-- ═══ TF-13 / TF-23 Stock by Operator chart ═══ -->
+  <div class="bg-white border border-[#E0E0E0] rounded mt-5 shadow-sm">
+    <div class="px-5 py-4 border-b border-[#F0F0F0] flex flex-wrap items-center justify-between gap-2">
       <div>
-        <h2 class="text-[13px] font-semibold text-[#333]">Tồn bãi theo hãng · dwell bucket</h2>
-        <div class="text-[11px] text-[#888]">SSC §5.2 — Fresh (&lt; 10 ngày) vs Tồn lâu (≥ 10 ngày)</div>
+        <h2 class="text-[15px] font-semibold text-[#1F2937]">Tồn bãi theo hãng · Dwell bucket</h2>
+        <div class="text-[11px] text-[#6B7280] mt-0.5">SSC §5.2 — Fresh (&lt; 10 ngày) vs Long-stay (≥ 10 ngày)</div>
       </div>
-      @if (hasStockData) {
-        <div class="text-right text-[11px] text-[#555]">
-          <div>Tổng: <span class="font-semibold text-[#333]">{{ stockTotal }}</span> container</div>
-          <div>Tồn lâu: <span class="font-semibold"
-                              [class.text-[#D9534F]]="stockLongStayPercent > 20"
-                              [class.text-[#3C763D]]="stockLongStayPercent <= 20">{{ stockLongStay }} ({{ stockLongStayPercent }}%)</span></div>
-        </div>
-      }
     </div>
-    <div class="p-4">
+
+    @if (hasStockData) {
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-0 border-b border-[#F0F0F0]">
+        <div class="px-5 py-3 border-r border-[#F0F0F0]">
+          <div class="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-medium">Total InDepot</div>
+          <div class="text-[22px] font-semibold text-[#1F2937] tabular-nums mt-1">{{ stockTotal }}</div>
+          <div class="text-[11px] text-[#6B7280]">container</div>
+        </div>
+        <div class="px-5 py-3 border-r border-[#F0F0F0]">
+          <div class="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-medium">Long-stay</div>
+          <div class="text-[22px] font-semibold tabular-nums mt-1"
+               [class.text-[#DC2626]]="stockLongStayPercent > 20"
+               [class.text-[#D97706]]="stockLongStayPercent > 10 && stockLongStayPercent <= 20"
+               [class.text-[#059669]]="stockLongStayPercent <= 10">
+            {{ stockLongStay }}
+          </div>
+          <div class="text-[11px] text-[#6B7280]">{{ stockLongStayPercent }}% tổng tồn</div>
+        </div>
+        <div class="px-5 py-3 border-r border-[#F0F0F0]">
+          <div class="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-medium">Top Operator</div>
+          @if (stockTopOperator) {
+            <div class="text-[15px] font-semibold text-[#1F2937] mt-1">{{ stockTopOperator.code }}</div>
+            <div class="text-[11px] text-[#6B7280]">{{ stockTopOperator.total }} container</div>
+          } @else {
+            <div class="text-[13px] text-[#9CA3AF] mt-1">—</div>
+          }
+        </div>
+        <div class="px-5 py-3">
+          <div class="text-[10px] uppercase tracking-wider text-[#9CA3AF] font-medium">Worst Long-stay %</div>
+          @if (stockWorstLongStay) {
+            <div class="text-[15px] font-semibold mt-1"
+                 [class.text-[#DC2626]]="stockWorstLongStay.percent > 30"
+                 [class.text-[#D97706]]="stockWorstLongStay.percent > 15 && stockWorstLongStay.percent <= 30"
+                 [class.text-[#1F2937]]="stockWorstLongStay.percent <= 15">
+              {{ stockWorstLongStay.code }}
+            </div>
+            <div class="text-[11px] text-[#6B7280]">{{ stockWorstLongStay.percent }}% tồn lâu</div>
+          } @else {
+            <div class="text-[13px] text-[#9CA3AF] mt-1">—</div>
+          }
+        </div>
+      </div>
+    }
+
+    <div class="p-5">
       @if (stockLoading) {
-        <div class="text-center text-[12px] text-[#888] py-10">Đang tải…</div>
+        <div class="text-center text-[12px] text-[#888] py-16">Đang tải…</div>
       } @else if (!hasStockData) {
-        <div class="text-center text-[12px] text-[#888] py-10">Chưa có container đang InDepot.</div>
+        <div class="text-center py-16">
+          <i class="pi pi-chart-bar text-[32px] text-[#D1D5DB] mb-2 block"></i>
+          <div class="text-[13px] text-[#6B7280] font-medium">Chưa có container đang InDepot</div>
+        </div>
       } @else {
-        <div style="height: 280px;">
+        <div style="height: 380px;">
           <p-chart type="bar" [data]="stockChartData" [options]="stockChartOptions" />
         </div>
       }

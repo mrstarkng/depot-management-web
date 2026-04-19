@@ -107,6 +107,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.throughputRaw.length > 0;
   }
 
+  // Throughput KPI getters — feed the summary strip above the chart.
+  get throughputInboundTotal(): number {
+    return this.throughputRaw.reduce((s, r) => s + r.inboundCount, 0);
+  }
+  get throughputOutboundTotal(): number {
+    return this.throughputRaw.reduce((s, r) => s + r.outboundCount, 0);
+  }
+  get throughputNet(): number {
+    return this.throughputInboundTotal - this.throughputOutboundTotal;
+  }
+  get throughputPeakDay(): { date: string; total: number } | null {
+    if (!this.throughputRaw.length) return null;
+    const byDate = new Map<string, number>();
+    this.throughputRaw.forEach(e => {
+      byDate.set(e.date, (byDate.get(e.date) ?? 0) + e.inboundCount + e.outboundCount);
+    });
+    const [date, total] = [...byDate.entries()].sort(([, a], [, b]) => b - a)[0];
+    return { date, total };
+  }
+  get throughputTopOperator(): { code: string; total: number } | null {
+    if (!this.throughputRaw.length) return null;
+    const byOp = new Map<string, number>();
+    this.throughputRaw.forEach(e => {
+      byOp.set(e.lineOperatorCode, (byOp.get(e.lineOperatorCode) ?? 0) + e.inboundCount + e.outboundCount);
+    });
+    const [code, total] = [...byOp.entries()].sort(([, a], [, b]) => b - a)[0];
+    return { code, total };
+  }
+
   private buildThroughputChartData(entries: ThroughputEntry[], mode: ThroughputMode): any {
     if (!entries.length) return null;
     const dates = Array.from(new Set(entries.map(e => e.date))).sort();
@@ -123,9 +152,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
           label: `${op} · Inbound`,
           data: dates.map(d => lookup.get(d)?.inboundCount ?? 0),
           borderColor: color,
-          backgroundColor: color + '22',
-          tension: 0.3,
-          borderDash: mode === 'both' ? undefined : undefined,
+          backgroundColor: `${color}22`,
+          borderWidth: 2.5,
+          tension: 0.4,
+          fill: mode === 'inbound',
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: color,
+          pointBorderWidth: 2,
         });
       }
       if (mode === 'both' || mode === 'outbound') {
@@ -133,30 +168,77 @@ export class DashboardComponent implements OnInit, OnDestroy {
           label: `${op} · Outbound`,
           data: dates.map(d => lookup.get(d)?.outboundCount ?? 0),
           borderColor: color,
-          backgroundColor: color + '11',
-          borderDash: [4, 4],
-          tension: 0.3,
+          backgroundColor: `${color}11`,
+          borderWidth: 2,
+          borderDash: mode === 'both' ? [5, 4] : undefined,
+          tension: 0.4,
+          fill: mode === 'outbound',
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointBackgroundColor: color,
+          pointBorderColor: color,
+          pointBorderWidth: 0,
         });
       }
     });
 
-    return { labels: dates, datasets };
+    return { labels: dates.map(d => this.fmtShortDate(d)), datasets };
+  }
+
+  private fmtShortDate(iso: string): string {
+    // "2026-04-15" → "15 Apr"
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
   }
 
   private buildLineChartOptions(): any {
     return {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: {
+            usePointStyle: true,
+            boxWidth: 10,
+            boxHeight: 10,
+            padding: 14,
+            font: { size: 11, family: 'system-ui, -apple-system, sans-serif' },
+            color: '#555',
+          },
+        },
         tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(17, 24, 39, 0.96)',
+          titleColor: '#fff',
+          titleFont: { weight: 'bold', size: 12 },
+          bodyColor: '#E5E7EB',
+          bodyFont: { size: 11 },
+          padding: 10,
+          borderColor: 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
+          cornerRadius: 6,
+          usePointStyle: true,
+          boxPadding: 6,
           callbacks: {
-            label: (ctx: any) => `${ctx.dataset.label}: ${ctx.parsed.y} (${ctx.label})`,
+            title: (items: any[]) => items[0]?.label ?? '',
+            label: (ctx: any) => ` ${ctx.dataset.label}: ${ctx.parsed.y}`,
           },
         },
       },
       scales: {
-        y: { beginAtZero: true, ticks: { precision: 0 } },
+        x: {
+          grid: { color: 'rgba(0,0,0,0.04)', drawBorder: false },
+          ticks: { color: '#666', font: { size: 11 } },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.06)', drawBorder: false },
+          ticks: { precision: 0, color: '#666', font: { size: 11 }, padding: 6 },
+        },
       },
     };
   }
@@ -182,21 +264,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.stockRaw.length > 0;
   }
 
+  get stockTopOperator(): { code: string; total: number } | null {
+    if (!this.stockRaw.length) return null;
+    const sorted = [...this.stockRaw]
+      .map(r => ({ code: r.lineOperatorCode, total: r.freshCount + r.longStayCount }))
+      .sort((a, b) => b.total - a.total);
+    return sorted[0] ?? null;
+  }
+
+  get stockWorstLongStay(): { code: string; percent: number } | null {
+    if (!this.stockRaw.length) return null;
+    const sorted = [...this.stockRaw]
+      .map(r => {
+        const total = r.freshCount + r.longStayCount;
+        return { code: r.lineOperatorCode, percent: total > 0 ? Math.round((r.longStayCount / total) * 100) : 0 };
+      })
+      .sort((a, b) => b.percent - a.percent);
+    return sorted[0] ?? null;
+  }
+
   private buildStockChartData(entries: StockByOperatorEntry[]): any {
     if (!entries.length) return null;
-    const labels = entries.map(e => e.lineOperatorCode);
+    // Sort descending by total so visual hierarchy reflects magnitude.
+    const sorted = [...entries].sort(
+      (a, b) => (b.freshCount + b.longStayCount) - (a.freshCount + a.longStayCount),
+    );
+    const labels = sorted.map(e => e.lineOperatorCode);
     return {
       labels,
       datasets: [
         {
-          label: '< 10 ngày',
-          data: entries.map(e => e.freshCount),
+          label: 'Fresh (< 10 ngày)',
+          data: sorted.map(e => e.freshCount),
           backgroundColor: '#2563EB',
+          borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 },
+          borderSkipped: false,
+          maxBarThickness: 56,
         },
         {
-          label: '≥ 10 ngày',
-          data: entries.map(e => e.longStayCount),
+          label: 'Long-stay (≥ 10 ngày)',
+          data: sorted.map(e => e.longStayCount),
           backgroundColor: '#E65100',
+          borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+          borderSkipped: false,
+          maxBarThickness: 56,
         },
       ],
     };
@@ -206,18 +317,54 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return {
       responsive: true,
       maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+        legend: {
+          position: 'top',
+          align: 'end',
+          labels: {
+            usePointStyle: true,
+            boxWidth: 10,
+            boxHeight: 10,
+            padding: 14,
+            font: { size: 11, family: 'system-ui, -apple-system, sans-serif' },
+            color: '#555',
+          },
+        },
         tooltip: {
+          mode: 'index',
+          intersect: false,
+          backgroundColor: 'rgba(17, 24, 39, 0.96)',
+          titleColor: '#fff',
+          titleFont: { weight: 'bold', size: 12 },
+          bodyColor: '#E5E7EB',
+          bodyFont: { size: 11 },
+          padding: 10,
+          cornerRadius: 6,
+          usePointStyle: true,
+          boxPadding: 6,
           callbacks: {
-            label: (ctx: any) => `${ctx.dataset.label}: ${ctx.parsed.y}`,
-            title: (items: any[]) => `Hãng ${items[0]?.label ?? ''}`,
+            title: (items: any[]) => `Line Operator: ${items[0]?.label ?? ''}`,
+            label: (ctx: any) => ` ${ctx.dataset.label}: ${ctx.parsed.y} container`,
+            footer: (items: any[]) => {
+              const total = items.reduce((s, i) => s + (i.parsed.y ?? 0), 0);
+              return `Tổng: ${total} container`;
+            },
           },
         },
       },
       scales: {
-        x: { stacked: true },
-        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+        x: {
+          stacked: true,
+          grid: { display: false, drawBorder: false },
+          ticks: { color: '#555', font: { size: 11, weight: '500' } },
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          grid: { color: 'rgba(0,0,0,0.06)', drawBorder: false },
+          ticks: { precision: 0, color: '#666', font: { size: 11 }, padding: 6 },
+        },
       },
     };
   }
