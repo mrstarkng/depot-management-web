@@ -85,9 +85,9 @@
         <div>
           <label class="block text-[12px] font-medium text-[#555] mb-1">Line Operator <span class="text-[#D9534F]">*</span></label>
           <select [(ngModel)]="inForm.lineOperatorId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
-            <option [value]="0" disabled>Select...</option>
+            <option [ngValue]="0" disabled>Select...</option>
             @for (op of lineOperators; track op.id) {
-              <option [value]="op.id">{{ op.code }} — {{ op.name }}</option>
+              <option [ngValue]="op.id">{{ op.code }} — {{ op.name }}</option>
             }
           </select>
         </div>
@@ -96,9 +96,9 @@
           <select [(ngModel)]="inForm.yardBlockId" (ngModelChange)="onInboundBlockChange()"
                   data-cy="gatein-block-select"
                   class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
-            <option [value]="0" disabled>Select...</option>
+            <option [ngValue]="0" disabled>Select...</option>
             @for (b of yardBlocks; track b.id) {
-              <option [value]="b.id" [disabled]="isBlockFull(b)" [attr.data-cy]="'gatein-block-option'">
+              <option [ngValue]="b.id" [disabled]="isBlockFull(b)" [attr.data-cy]="'gatein-block-option'">
                 {{ b.code }} ({{ b.blockType }}){{ isBlockFull(b) ? ' — FULL' : (isBlockNearFull(b) ? ' — sắp đầy' : '') }}
               </option>
             }
@@ -525,7 +525,7 @@
             <label class="block text-[12px] font-medium text-[#555] mb-1">Target Block <span class="text-[#D9534F]">*</span></label>
             <select [(ngModel)]="relocateForm.yardBlockId" (ngModelChange)="onRelocateBlockChange()" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
               @for (b of yardBlocks; track b.id) {
-                <option [value]="b.id">{{ b.code }} ({{ b.blockType }})</option>
+                <option [ngValue]="b.id">{{ b.code }} ({{ b.blockType }})</option>
               }
             </select>
           </div>
@@ -677,9 +677,9 @@
       <div class="mb-3">
         <label class="block text-[12px] font-medium text-[#555] mb-1">New Block <span class="text-[#D9534F]">*</span></label>
         <select [(ngModel)]="relTabForm.yardBlockId" (ngModelChange)="onRelTabBlockChange()" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
-          <option [value]="0" disabled>Select block...</option>
+          <option [ngValue]="0" disabled>Select block...</option>
           @for (b of yardBlocks; track b.id) {
-            <option [value]="b.id">{{ b.code }} ({{ b.blockType }})</option>
+            <option [ngValue]="b.id">{{ b.code }} ({{ b.blockType }})</option>
           }
         </select>
       </div>

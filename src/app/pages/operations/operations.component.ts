@@ -400,7 +400,7 @@ export class OperationsComponent implements OnInit {
   }
 
   get selectedInboundBlock(): YardBlock | undefined {
-    return this.yardBlocks.find(b => b.id === this.inForm.yardBlockId);
+    return this.yardBlocks.find(b => b.id === Number(this.inForm.yardBlockId));
   }
 
   onInboundBlockChange(): void {
@@ -429,7 +429,7 @@ export class OperationsComponent implements OnInit {
     const req: InboundContainerRequest = {
       containerNumber: this.inForm.selectedContainerNumber,
       lineOperatorId: this.inForm.lineOperatorId,
-      yardBlockId: this.inForm.yardBlockId,
+      yardBlockId: Number(this.inForm.yardBlockId),
       bay: pos.bay ?? undefined,
       row: pos.row ?? undefined,
       tier: pos.tier ?? undefined,
@@ -568,7 +568,7 @@ export class OperationsComponent implements OnInit {
   }
 
   get selectedRelocateBlock(): YardBlock | undefined {
-    return this.yardBlocks.find(b => b.id === this.relocateForm.yardBlockId);
+    return this.yardBlocks.find(b => b.id === Number(this.relocateForm.yardBlockId));
   }
 
   onRelocateBlockChange(): void {
@@ -590,7 +590,7 @@ export class OperationsComponent implements OnInit {
     const pos = this.relocatePos.value;
     const req: RelocateContainerRequest = {
       containerNumber: this.selectedVisit!.containerNumber,
-      yardBlockId: this.relocateForm.yardBlockId,
+      yardBlockId: Number(this.relocateForm.yardBlockId),
       bay: pos.bay ?? undefined,
       row: pos.row ?? undefined,
       tier: pos.tier ?? undefined,
@@ -636,7 +636,7 @@ export class OperationsComponent implements OnInit {
   }
 
   get selectedRelTabBlock(): YardBlock | undefined {
-    return this.yardBlocks.find(b => b.id === this.relTabForm.yardBlockId);
+    return this.yardBlocks.find(b => b.id === Number(this.relTabForm.yardBlockId));
   }
 
   onRelTabBlockChange(): void {
@@ -658,7 +658,7 @@ export class OperationsComponent implements OnInit {
     const pos = this.relTabPos.value;
     const req: RelocateContainerRequest = {
       containerNumber: this.relTabForm.selectedContainerNumber,
-      yardBlockId: this.relTabForm.yardBlockId,
+      yardBlockId: Number(this.relTabForm.yardBlockId),
       bay: pos.bay ?? undefined,
       row: pos.row ?? undefined,
       tier: pos.tier ?? undefined,
