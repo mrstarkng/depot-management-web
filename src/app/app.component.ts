@@ -46,9 +46,12 @@ export class AppComponent {
     },
   ];
 
+  // Per DEC-007 + BR-ALERT-01 + BR-FE-RBAC-05:
+  // Customer + LineOperator = master data for Delivery Orders domain.
+  // Access = canManageOrders() (OrderClerk + Manager). NOT isManager() only.
   refItems: NavItem[] = [
-    { path: '/customers', label: 'Customers', icon: 'pi pi-users', visible: computed(() => this.authService.isManager()) },
-    { path: '/line-operators', label: 'Line Operators', icon: 'pi pi-truck', visible: computed(() => this.authService.isManager()) },
+    { path: '/customers', label: 'Customers', icon: 'pi pi-users', visible: computed(() => this.authService.canManageOrders()) },
+    { path: '/line-operators', label: 'Line Operators', icon: 'pi pi-truck', visible: computed(() => this.authService.canManageOrders()) },
   ];
 
   adminItems: NavItem[] = [
