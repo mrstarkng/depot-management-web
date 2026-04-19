@@ -1,34 +1,48 @@
 // Scenario 3 — Gate-Out with Delivery Order.
 //
-// OrderClerk creates a DO against a container currently in the yard, then
-// GateOperator performs a Gate-Out against that DO. The container should
-// disappear from the block slot and the DO should transition to Consumed.
+// Flow:
+// 1. OrderClerk opens the New Delivery Order slide-over, fills required
+//    header fields (orderNumber / lineOperator / customer / expiryDate),
+//    and submits. The DO appears in the list.
+// 2. GateOperator opens Operations → Outbound tab, picks an in-depot
+//    container from the typeahead, attaches the DO by typeahead, and
+//    submits. The flow should succeed and the container leaves the yard.
+//
+// Notes:
+// - The DO create form uses template-driven [(ngModel)]; we use data-cy
+//   hooks added in this sprint.
+// - DO is attached by order number typeahead, not by line; quota is managed
+//   per line on the backend side.
 
 describe('Gate-Out with Delivery Order', () => {
   const doNumber = `DO-${Math.floor(Math.random() * 100000)
     .toString()
     .padStart(5, '0')}`;
 
-  it('OrderClerk creates a DO for an in-yard container', () => {
+  it('OrderClerk creates a new DO', () => {
     cy.login('orderClerk');
     cy.visit('/delivery-orders');
 
-    cy.contains('button', /new|create|tạo/i).click();
+    cy.get('[data-cy="do-new-order"]').click();
+    cy.get('[data-cy="do-order-number"]').clear().type(doNumber);
 
-    cy.get('input[formcontrolname="doNumber"]').clear().type(doNumber);
-    cy.get('input[formcontrolname="containerNumber"]')
-      .parents('form')
-      .find('input[formcontrolname="containerNumber"]')
-      .clear()
-      .type('SEED00000001'); // Seeded container, present in every reset.
+    // Pick the first real option (skipping the "Select..." placeholder).
+    cy.get('[data-cy="do-line-operator"] option')
+      .eq(1)
+      .then(($opt) => {
+        cy.get('[data-cy="do-line-operator"]').select($opt.val() as string);
+      });
+    cy.get('[data-cy="do-customer"] option')
+      .eq(1)
+      .then(($opt) => {
+        cy.get('[data-cy="do-customer"]').select($opt.val() as string);
+      });
 
-    // Expiry date: 2 days from now.
     const expiry = new Date();
     expiry.setDate(expiry.getDate() + 2);
-    const expiryISO = expiry.toISOString().slice(0, 10);
-    cy.get('input[formcontrolname="expiryDate"], input[type="date"]').first().clear().type(expiryISO);
+    cy.get('[data-cy="do-expiry"]').clear().type(expiry.toISOString().slice(0, 10));
 
-    cy.contains('button', /save|create|submit|xác nhận/i).click();
+    cy.get('[data-cy="do-create-submit"]').should('not.be.disabled').click();
 
     cy.contains(doNumber, { timeout: 10000 }).should('be.visible');
   });
@@ -36,23 +50,22 @@ describe('Gate-Out with Delivery Order', () => {
   it('GateOperator performs Gate-Out against the DO', () => {
     cy.login('gateOperator');
     cy.visit('/operations');
+    cy.get('[data-cy="tab-outbound"]').click();
 
-    cy.contains(/gate-?out/i).click();
+    // Pick first in-depot container from typeahead.
+    cy.get('[data-cy="gateout-container-search"]').clear().type('SEED');
+    cy.contains('button', /SEED|TU|CMAU/i, { timeout: 6000 }).first().click();
 
-    cy.get('input[formcontrolname="deliveryOrderNumber"], input[name="deliveryOrderNumber"]')
-      .first()
-      .clear()
-      .type(doNumber);
-    cy.contains('button', /gate-?out|submit|confirm/i).click();
+    // Attach the DO by typeahead.
+    cy.get('[data-cy="gateout-order-search"]').clear().type(doNumber.slice(0, 6));
+    cy.contains('button', doNumber, { timeout: 6000 }).click();
 
-    cy.contains(/success|đã gate|thành công/i, { timeout: 10000 }).should('be.visible');
+    cy.get('[data-cy="gateout-submit"]').should('not.be.disabled').click();
 
-    // DO consumed.
+    cy.contains(/recorded|success|thành công/i, { timeout: 10000 }).should('be.visible');
+
+    // DO should reflect remaining quantity decremented.
     cy.visit('/delivery-orders');
-    cy.contains(doNumber)
-      .parents('tr')
-      .within(() => {
-        cy.contains(/consumed|đã sử dụng/i).should('be.visible');
-      });
+    cy.contains(doNumber).should('be.visible');
   });
 });

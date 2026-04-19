@@ -7,7 +7,7 @@
     <h1 class="text-[20px] font-semibold text-[#333]">Delivery Orders</h1>
   </div>
   @if (authService.canManageOrders()) {
-    <button (click)="openCreate()" class="bg-[#0275D8] text-white px-4 py-2 rounded text-[13px] font-medium hover:bg-[#025AA5]">
+    <button (click)="openCreate()" data-cy="do-new-order" class="bg-[#0275D8] text-white px-4 py-2 rounded text-[13px] font-medium hover:bg-[#025AA5]">
       <i class="pi pi-plus mr-1.5"></i>New Order
     </button>
   }
@@ -168,14 +168,14 @@
 
     <div>
       <label class="block text-[12px] font-medium text-[#555] mb-1">Order Number <span class="text-[#D9534F]">*</span></label>
-      <input [(ngModel)]="form.orderNumber" placeholder="DO-xxx"
+      <input [(ngModel)]="form.orderNumber" placeholder="DO-xxx" data-cy="do-order-number"
              class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
     </div>
 
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="block text-[12px] font-medium text-[#555] mb-1">Line Operator <span class="text-[#D9534F]">*</span></label>
-        <select [(ngModel)]="form.lineOperatorId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+        <select [(ngModel)]="form.lineOperatorId" data-cy="do-line-operator" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
           <option [ngValue]="0">Select operator...</option>
           @for (op of lineOperators; track op.id) {
             <option [ngValue]="op.id">{{ op.code }} — {{ op.name }}</option>
@@ -184,7 +184,7 @@
       </div>
       <div>
         <label class="block text-[12px] font-medium text-[#555] mb-1">Customer <span class="text-[#D9534F]">*</span></label>
-        <select [(ngModel)]="form.customerId" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
+        <select [(ngModel)]="form.customerId" data-cy="do-customer" class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] bg-white">
           <option [ngValue]="0">Select customer...</option>
           @for (c of customers; track c.id) {
             <option [ngValue]="c.id">{{ c.taxCode }} — {{ c.name }}</option>
@@ -201,7 +201,7 @@
       </div>
       <div>
         <label class="block text-[12px] font-medium text-[#555] mb-1">Expiry Date <span class="text-[#D9534F]">*</span></label>
-        <input type="date" [(ngModel)]="form.orderExpiryDate"
+        <input type="date" [(ngModel)]="form.orderExpiryDate" data-cy="do-expiry"
                class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px]">
       </div>
     </div>
@@ -275,6 +275,7 @@
       <button (click)="slideOpen = false"
               class="flex-1 px-4 py-2 text-[13px] border border-[#CCC] rounded text-[#555] hover:bg-[#F5F5F5]">Cancel</button>
       <button (click)="createOrder()" [disabled]="saving || !form.orderNumber || !form.lineOperatorId || !form.customerId || !form.orderExpiryDate"
+              data-cy="do-create-submit"
               class="flex-1 px-4 py-2 text-[13px] bg-[#0275D8] text-white rounded hover:bg-[#025AA5] disabled:opacity-50">
         {{ saving ? 'Creating...' : 'Create Order' }}
       </button>

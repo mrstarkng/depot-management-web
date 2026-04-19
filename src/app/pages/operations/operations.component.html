@@ -247,6 +247,7 @@
         <label class="block text-[12px] font-medium text-[#555] mb-1">Container <span class="text-[#D9534F]">*</span></label>
         <div class="relative">
           <input [(ngModel)]="outForm.containerSearch" placeholder="Search in-depot container..."
+                 data-cy="gateout-container-search"
                  class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] focus:border-[#0275D8] focus:outline-none">
           @if (outForm.containerSearch && !outForm.selectedContainerNumber) {
             <div class="absolute z-10 w-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg max-h-[200px] overflow-y-auto">
@@ -286,6 +287,7 @@
         <label class="block text-[12px] font-medium text-[#555] mb-1">Delivery Order <span class="text-[11px] text-[#888]">(optional)</span></label>
         <div class="relative">
           <input [(ngModel)]="outForm.orderSearch" placeholder="Search order number..."
+                 data-cy="gateout-order-search"
                  class="w-full border border-[#CCC] rounded px-3 py-1.5 text-[13px] focus:border-[#0275D8] focus:outline-none">
           @if (outForm.orderSearch && !outForm.selectedOrderNumber) {
             <div class="absolute z-10 w-full mt-1 bg-white border border-[#E0E0E0] rounded shadow-lg max-h-[200px] overflow-y-auto">
@@ -344,6 +346,7 @@
       }
       <button (click)="submitOutbound()"
               [disabled]="outboundSaving || !outForm.selectedContainerNumber"
+              data-cy="gateout-submit"
               class="w-full bg-[#0275D8] text-white py-2 rounded text-[13px] font-medium hover:bg-[#025AA5] disabled:opacity-50 disabled:cursor-not-allowed">
         {{ outboundSaving ? 'Recording...' : 'Record Outbound' }}
       </button>
