@@ -137,9 +137,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private buildThroughputChartData(entries: ThroughputEntry[], mode: ThroughputMode): any {
-    if (!entries.length) return null;
-    const dates = Array.from(new Set(entries.map(e => e.date))).sort();
+    // Build the x-axis from the selected [from, to] range (inclusive) so
+    // days with zero activity — especially "today" when BE returns no rows
+    // — still show as a tick with value 0 instead of disappearing.
+    const dates = this.buildDateRange(this.throughputFrom, this.throughputTo);
+    if (!dates.length) return null;
     const operators = Array.from(new Set(entries.map(e => e.lineOperatorCode))).sort();
+    if (!operators.length) {
+      // No operators in response → still render empty chart over the range.
+      return { labels: dates.map(d => this.fmtShortDate(d)), datasets: [] };
+    }
 
     const datasets: any[] = [];
     operators.forEach((op, i) => {
@@ -189,6 +196,23 @@ export class DashboardComponent implements OnInit, OnDestroy {
     // "2026-04-15" → "15 Apr"
     const d = new Date(iso);
     return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+  }
+
+  private buildDateRange(fromIso: string, toIso: string): string[] {
+    if (!fromIso || !toIso) return [];
+    const from = new Date(fromIso + 'T00:00:00');
+    const to = new Date(toIso + 'T00:00:00');
+    if (isNaN(from.getTime()) || isNaN(to.getTime()) || from > to) return [];
+    const out: string[] = [];
+    const cursor = new Date(from);
+    while (cursor <= to) {
+      const y = cursor.getFullYear();
+      const m = String(cursor.getMonth() + 1).padStart(2, '0');
+      const d = String(cursor.getDate()).padStart(2, '0');
+      out.push(`${y}-${m}-${d}`);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return out;
   }
 
   private buildLineChartOptions(): any {

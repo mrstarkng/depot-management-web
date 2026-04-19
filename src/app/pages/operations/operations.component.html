@@ -215,10 +215,18 @@
       </button>
     </div>
 
-    <!-- Recent Inbound -->
+    <!-- Inbound ledger for the selected day (default = today). -->
     <div class="w-full lg:w-[360px] bg-white border border-[#E0E0E0] rounded">
       <div class="px-4 py-3 border-b border-[#E0E0E0]">
-        <h3 class="text-[13px] font-semibold text-[#333]">Recent Inbound ({{ recentInbound.length }})</h3>
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <h3 class="text-[13px] font-semibold text-[#333]">Inbound ngày này ({{ recentInbound.length }})</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="date" [ngModel]="historyDate" (ngModelChange)="onHistoryDateChange($event)"
+                 class="flex-1 border border-[#CCC] rounded px-2 py-1 text-[11px]">
+          <button (click)="onHistoryDateChange('')" title="Về hôm nay"
+                  class="text-[11px] text-[#0275D8] hover:underline">Hôm nay</button>
+        </div>
       </div>
       <div class="max-h-[400px] overflow-y-auto">
         @for (v of recentInbound; track v.id) {
@@ -228,7 +236,7 @@
             <span class="text-[#AAA] ml-2">{{ v.inboundAt | date:'HH:mm' }}</span>
           </div>
         } @empty {
-          <div class="px-4 py-6 text-center text-[12px] text-[#888]">No recent inbound records</div>
+          <div class="px-4 py-6 text-center text-[12px] text-[#888]">Không có inbound trong ngày này</div>
         }
       </div>
     </div>
@@ -352,10 +360,18 @@
       </button>
     </div>
 
-    <!-- Recent Outbound -->
+    <!-- Outbound ledger for the selected day (default = today). -->
     <div class="w-full lg:w-[360px] bg-white border border-[#E0E0E0] rounded">
       <div class="px-4 py-3 border-b border-[#E0E0E0]">
-        <h3 class="text-[13px] font-semibold text-[#333]">Recent Outbound ({{ recentOutbound.length }})</h3>
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <h3 class="text-[13px] font-semibold text-[#333]">Outbound ngày này ({{ recentOutbound.length }})</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="date" [ngModel]="historyDate" (ngModelChange)="onHistoryDateChange($event)"
+                 class="flex-1 border border-[#CCC] rounded px-2 py-1 text-[11px]">
+          <button (click)="onHistoryDateChange('')" title="Về hôm nay"
+                  class="text-[11px] text-[#0275D8] hover:underline">Hôm nay</button>
+        </div>
       </div>
       <div class="max-h-[400px] overflow-y-auto">
         @for (v of recentOutbound; track v.id) {
@@ -365,7 +381,7 @@
             <span class="text-[#AAA] ml-2">{{ v.outboundAt | date:'HH:mm' }}</span>
           </div>
         } @empty {
-          <div class="px-4 py-6 text-center text-[12px] text-[#888]">No recent outbound records</div>
+          <div class="px-4 py-6 text-center text-[12px] text-[#888]">Không có outbound trong ngày này</div>
         }
       </div>
     </div>
@@ -765,10 +781,18 @@
       </button>
     </div>
 
-    <!-- Recent Relocations -->
+    <!-- Relocate ledger for the selected day (best-effort via lastMovementAt). -->
     <div class="w-full lg:w-[360px] bg-white border border-[#E0E0E0] rounded">
       <div class="px-4 py-3 border-b border-[#E0E0E0]">
-        <h3 class="text-[13px] font-semibold text-[#333]">Recent Relocations ({{ recentRelocations.length }})</h3>
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <h3 class="text-[13px] font-semibold text-[#333]">Relocate ngày này ({{ recentRelocations.length }})</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="date" [ngModel]="historyDate" (ngModelChange)="onHistoryDateChange($event)"
+                 class="flex-1 border border-[#CCC] rounded px-2 py-1 text-[11px]">
+          <button (click)="onHistoryDateChange('')" title="Về hôm nay"
+                  class="text-[11px] text-[#0275D8] hover:underline">Hôm nay</button>
+        </div>
       </div>
       <div class="max-h-[400px] overflow-y-auto">
         @for (v of recentRelocations; track v.id) {
@@ -778,7 +802,7 @@
             <span class="text-[#AAA] ml-2">{{ v.lastMovementAt | date:'HH:mm' }}</span>
           </div>
         } @empty {
-          <div class="px-4 py-6 text-center text-[12px] text-[#888]">No recent relocations</div>
+          <div class="px-4 py-6 text-center text-[12px] text-[#888]">Không có relocate trong ngày này</div>
         }
       </div>
     </div>

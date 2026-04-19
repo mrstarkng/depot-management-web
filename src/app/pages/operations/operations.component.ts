@@ -160,7 +160,18 @@ export class OperationsComponent implements OnInit {
   };
   inboundSaving = false;
   inboundError = '';
-  recentInbound: ContainerVisit[] = [];
+  // Date the 3 "Recent ..." ledgers are showing (inbound / outbound /
+  // relocate). Default = today. Rule: these ledgers must reflect the
+  // backend's authoritative history for the selected day — never a session
+  // log. User may change the date to browse past days.
+  historyDate: string = this.todayIso();
+  allVisits: ContainerVisit[] = [];
+
+  get recentInbound(): ContainerVisit[] {
+    return this.allVisits
+      .filter(v => v.inboundAt && this.toIsoDate(v.inboundAt) === this.historyDate)
+      .sort((a, b) => new Date(b.inboundAt).getTime() - new Date(a.inboundAt).getTime());
+  }
   readonly inboundPos: PositionGroup = buildPositionGroup(
     () => this.containers.find(c => c.containerNumber === this.inForm.selectedContainerNumber)?.containerSize,
     () => this.selectedInboundBlock,
@@ -177,7 +188,11 @@ export class OperationsComponent implements OnInit {
   };
   outboundSaving = false;
   outboundError = '';
-  recentOutbound: ContainerVisit[] = [];
+  get recentOutbound(): ContainerVisit[] {
+    return this.allVisits
+      .filter(v => v.outboundAt && this.toIsoDate(v.outboundAt) === this.historyDate)
+      .sort((a, b) => new Date(b.outboundAt!).getTime() - new Date(a.outboundAt!).getTime());
+  }
   selectedOutboundVisit: ContainerVisit | null = null;
 
   // In Depot
@@ -213,7 +228,19 @@ export class OperationsComponent implements OnInit {
   };
   relTabSaving = false;
   relTabError = '';
-  recentRelocations: ContainerVisit[] = [];
+  // Relocate ledger derived from visits whose `lastMovementAt` falls on the
+  // selected day AND movement type is Relocate. Using `lastMovementAt` is a
+  // best-effort proxy until BE exposes a movements-by-date endpoint; covers
+  // the common case where the last movement IS the relocate.
+  get recentRelocations(): ContainerVisit[] {
+    return this.allVisits
+      .filter(v => v.lastMovementAt
+        && v.inboundAt
+        && this.toIsoDate(v.lastMovementAt) === this.historyDate
+        // Exclude pure inbound records (last move = inbound).
+        && this.toIsoDate(v.lastMovementAt) !== this.toIsoDate(v.inboundAt))
+      .sort((a, b) => new Date(b.lastMovementAt!).getTime() - new Date(a.lastMovementAt!).getTime());
+  }
   selectedRelTabContainer: ContainerOverview | null = null;
   readonly relTabPos: PositionGroup = buildPositionGroup(
     () => this.selectedRelTabContainer?.containerSize,
@@ -353,6 +380,30 @@ export class OperationsComponent implements OnInit {
 
   loadInDepotVisits() {
     this.depotService.getContainerVisits({ status: 'InDepot' }).subscribe(d => this.inDepotVisits = d);
+    // Ledger for Recent Inbound / Outbound / Relocate. Fetch full history
+    // (no status filter) so the ledger can show both active and released
+    // visits for the selected `historyDate`.
+    this.depotService.getContainerVisits().subscribe(d => this.allVisits = d);
+  }
+
+  private todayIso(): string {
+    const d = new Date();
+    return this.toIsoDate(d);
+  }
+
+  private toIsoDate(input: string | Date): string {
+    const d = typeof input === 'string' ? new Date(input) : input;
+    if (isNaN(d.getTime())) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  onHistoryDateChange(iso: string) {
+    this.historyDate = iso || this.todayIso();
+    // Re-fetch ledger data to pick up any rows created while viewing.
+    this.depotService.getContainerVisits().subscribe(d => this.allVisits = d);
   }
 
   // ── Container search helpers ──
@@ -441,7 +492,8 @@ export class OperationsComponent implements OnInit {
     this.depotService.inboundContainer(req).subscribe({
       next: (visit) => {
         this.inboundSaving = false;
-        this.recentInbound = [visit, ...this.recentInbound].slice(0, 15);
+        // Ledger reloads from BE via loadInDepotVisits() below — the
+        // recentInbound getter derives from allVisits, so no session push.
         this.messageService.add({
           severity: 'success', summary: 'Gate-In Recorded',
           detail: `${visit.containerNumber} → ${visit.yardBlockCode}`, life: 3000,
@@ -482,7 +534,7 @@ export class OperationsComponent implements OnInit {
     this.depotService.outboundContainer(req).subscribe({
       next: (visit) => {
         this.outboundSaving = false;
-        this.recentOutbound = [visit, ...this.recentOutbound].slice(0, 15);
+        // Ledger reloads via loadInDepotVisits() — getter derives.
         this.messageService.add({
           severity: 'success', summary: 'Gate-Out Recorded',
           detail: `${visit.containerNumber} released${visit.deliveryOrderNumber ? ' via ' + visit.deliveryOrderNumber : ''}`, life: 3000,
@@ -670,7 +722,7 @@ export class OperationsComponent implements OnInit {
     this.depotService.relocateContainer(req).subscribe({
       next: (visit) => {
         this.relTabSaving = false;
-        this.recentRelocations = [visit, ...this.recentRelocations].slice(0, 15);
+        // Ledger reloads via loadInDepotVisits() — getter derives.
         this.messageService.add({
           severity: 'success', summary: 'Relocated',
           detail: `${visit.containerNumber} → ${visit.yardBlockCode}${visit.bay ? ' Bay ' + visit.bay : ''}`, life: 3000,
