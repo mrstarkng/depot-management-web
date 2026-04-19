@@ -154,7 +154,13 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
     return blocks.filter(b => !active.has(b.category)).map(b => b.blockCode);
   });
 
-  private renderer: KonvaYardMap | null = null;
+  // Signal so `effect()` re-runs when the renderer is assigned in
+  // ngAfterViewInit — otherwise the first effect pass sees null, doesn't read
+  // the other signals, doesn't track them, and never fires again when the
+  // user toggles category chips.
+  private readonly rendererSig = signal<KonvaYardMap | null>(null);
+  private get renderer(): KonvaYardMap | null { return this.rendererSig(); }
+  private set renderer(v: KonvaYardMap | null) { this.rendererSig.set(v); }
   private readonly destroyed$ = new Subject<void>();
   private readonly searchDebounce$ = new Subject<string>();
   private eventsSub?: Subscription;
@@ -166,26 +172,34 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
     // Category chip = filter: only blocks whose category is active render.
     // Hide (not dim) makes chip state unambiguous — user immediately sees
     // the canvas change when they toggle.
+    //
+    // IMPORTANT: read all signals BEFORE the renderer null check so the
+    // effect tracks them on first run (when renderer is still null) and
+    // re-runs once the renderer is assigned + every time a chip toggles.
     effect(() => {
-      const r = this.renderer;
+      const blocks = this.filteredBlocks();
+      const facilities = this.overview()?.facilities ?? [];
+      const selection = this.selectedBlockCode();
+      const r = this.rendererSig();
       if (!r) return;
-      r.setBlocks(this.filteredBlocks());
-      r.setFacilities(this.overview()?.facilities ?? []);
+      r.setBlocks(blocks);
+      r.setFacilities(facilities);
       r.setDimmedBlocks([]);
-      r.setSelection(this.selectedBlockCode());
+      r.setSelection(selection);
     });
 
     effect(() => {
-      const r = this.renderer;
+      const editable = this.editor.state() === 'holding';
+      const r = this.rendererSig();
       if (!r) return;
-      r.setEditable(this.editor.state() === 'holding');
+      r.setEditable(editable);
     });
 
     effect(() => {
-      const r = this.renderer;
-      if (!r) return;
       const mode = this.overlayMode();
       const cells = this.heatmapCache.get(mode)?.cells ?? [];
+      const r = this.rendererSig();
+      if (!r) return;
       r.setOverlay(mode, cells);
     });
   }
@@ -268,10 +282,8 @@ export class YardMapComponent implements OnInit, OnDestroy, AfterViewInit {
       this.editor.trackDirty(block, { canvasX: ev.canvasX, canvasY: ev.canvasY });
     });
 
-    // Paint first frame + sync editable if lock already held
-    this.renderer.setBlocks(this.overview()?.blocks ?? []);
-    this.renderer.setFacilities(this.overview()?.facilities ?? []);
-    this.renderer.setEditable(this.editor.state() === 'holding');
+    // First paint is driven by the effect — assigning the renderer signal
+    // above triggers the effect to run with the current snapshot/filter state.
   }
 
   async ngOnDestroy() {
