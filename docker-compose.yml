@@ -1,0 +1,19 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: depot-management-web:local
+    container_name: depot-web
+    ports:
+      - "4200:80"
+    networks:
+      - depot-net
+    depends_on: []
+    restart: unless-stopped
+
+networks:
+  # The backend compose is expected to create/own this network.
+  # Create it once with:  docker network create depot-net
+  depot-net:
+    external: true

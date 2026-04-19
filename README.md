@@ -27,12 +27,43 @@ npm run build
 npm test -- --watch=false --browsers=ChromeHeadless
 ```
 
-### Docker
+---
+
+## Docker deployment
+
+Multi-stage build: Node 20 alpine (builder) → nginx 1.27 alpine (runtime). Final image
+serves the SPA at port 80 and proxies `/api/*` → `api:8080/api` and `/hubs/*` →
+`api:8080/hubs` (WebSocket upgrade enabled for SignalR). Hashed static assets are
+cached for 7 days `immutable`; `index.html` is `no-cache`.
+
+### Standalone (frontend + existing backend compose)
+
+Both containers need to share a user-defined network. Create it once:
 
 ```bash
-docker build -t depot-management-web .
-docker run -p 80:80 depot-management-web
+docker network create depot-net
 ```
+
+Then bring the backend up on that network (see `depot-management-api/`), followed by:
+
+```bash
+docker compose up --build
+# → http://localhost:4200
+```
+
+The compose file declares `depot-net` as `external: true`, so the backend compose
+is the source of truth for the network's lifecycle.
+
+### Full stack
+
+For a single-command boot of SQL Server + API + web, see
+`depot-management-api/docker-compose.full.yml` (owned by the backend repo).
+
+### Image reference
+
+- Tag: `depot-management-web:local`
+- Exposed port: `80`
+- Healthcheck: `GET /` every 30 s (wget inside the container).
 
 ---
 
